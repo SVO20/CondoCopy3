@@ -57,7 +57,7 @@ class TrayApp:
             for drive in drive_list:
                 if os.path.exists(drive):
                     # BLOCKING
-                    callback(drive)  # If the drive is found, call the callback function
+                    callback(drive)  # If the drive is found
 
             # Wait for 2 seconds
             await asyncio.sleep(2)
