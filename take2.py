@@ -1,10 +1,12 @@
 import sys
 import os
 import asyncio
+import psutil
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction
 from PyQt5.QtGui import QIcon, QCursor
 import win32file
 import datetime
+
 
 class TrayApp:
     def __init__(self):
@@ -12,7 +14,7 @@ class TrayApp:
         self.parent_app_ = QApplication(sys.argv)
 
         # === TRAY ===
-        # Create a system tray icon as child of QApplication instance
+        # Create a system tray icon as child
         self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), self.parent_app_)
         # Create a context menu
         self.menu = QMenu()
@@ -32,26 +34,33 @@ class TrayApp:
         # Create a flag to ensure the Qt app is alive
         self.running = True
 
+        ## === VARS ===
+        self.last_drive_list = []
+
     def run(self):
         # Schedule the SD card monitoring task
-        self.loop_.create_task(self.monitor_sd_insertion(self.on_sd_inserted))
+        self.loop_.create_task(self.monitor_sd_insertion(on_sd_inserted))
         # Run the Qt application and asyncio event loop together
         self.loop_.run_until_complete(self.qt_life_cycle())
 
     async def monitor_sd_insertion(self, callback):
-        # Get a list of removable drives (SD cards)
-        drive_list = ['%c:\\' % d for d in range(65, 91) if
-                      win32file.GetDriveType('%c:\\' % d) == win32file.DRIVE_REMOVABLE]
         while self.running:
-            # Print a debug message to indicate the task is running
-            print("Async task running...")
-            # Check each drive to see if it exists and has a volume
+            print("Checking drives... == SIMPLE ==")
+            drive_list = []
+            # Get a list of all connected disk partitions
+            for partition in psutil.disk_partitions():
+                # Check if the disk is removable by looking for 'removable' in partition options
+                if 'removable' in partition.opts:
+                    drive_list.append(partition.device)
+
+            # Check each removable drive to see if it exists and is accessible
             for drive in drive_list:
-                if os.path.exists(drive) and win32file.GetVolumeInformation(drive):
-                    # If a drive is found, call the provided callback function
-                    callback(drive)
-            # Wait for 1 second before checking again
-            await asyncio.sleep(1)
+                if os.path.exists(drive):
+                    # BLOCKING
+                    callback(drive)  # If the drive is found, call the callback function
+
+            # Wait for 2 seconds
+            await asyncio.sleep(2)
 
     async def qt_life_cycle(self):
         # Run the Qt application intertnal events until the application quits
@@ -66,18 +75,19 @@ class TrayApp:
         # Stop the app
         self.running = False
 
-    def on_sd_inserted(self, drive):
-        # Analyze the SD card and notify the user
-        analyze_sd_card(drive)
-        notify_user(f"SD card analyzed: {drive}")
-        log_event("INFO", f"SD card analyzed: {drive}")
-
     ### ----------------------------------------------------------------------
 
     def on_tray_icon_activated(self, reason):
         # Left click handling
         if reason == QSystemTrayIcon.Trigger:
             self.menu.exec_(QCursor.pos())
+
+
+def on_sd_inserted(drive):
+    # Analyze the SD card and notify the user
+    analyze_sd_card(drive)
+    notify_user(f"SD card analyzed: {drive}")
+    log_event("INFO", f"SD card analyzed: {drive}")
 
 def analyze_sd_card(drive_path):
     # Define the required structure of folders and files on the SD card
@@ -107,6 +117,5 @@ def log_event(event_type, message):
         log_file.write(f"{datetime.datetime.now()} - {event_type}: {message}\n")
 
 if __name__ == "__main__":
-    # Create an instance of TrayApp and run it
     tray_app = TrayApp()
     tray_app.run()
