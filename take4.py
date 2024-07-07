@@ -16,15 +16,19 @@ def get_directories(path):
     return directories
 
 
-def match_camera_model(sd_path, camera_data):
+def match_camera_model(sd_path, cameras: dict):
     """Match the SD card structure to a camera model."""
     sd_directories = get_directories(sd_path)
-    camera_models = camera_data['cameras']
+    camera_models = cameras['cameras']
 
     # Sort camera models by the length of their required structure in descending order
-    sorted_models = sorted(camera_models.items(), key=lambda item: len(item[1]['structure']),
+    # todo Dirs-list is a set..
+    #  Make sorting from complex structs to simple more relevant via operations over SETs
+    sorted_models = sorted(camera_models.items(),
+                           key=lambda item: len(item[1]['structure']),
                            reverse=True)
     print(sorted_models)
+
     for model, data in sorted_models:
         required_structure = set(data['structure'])
         if required_structure.issubset(sd_directories):
@@ -32,7 +36,7 @@ def match_camera_model(sd_path, camera_data):
     return None
 
 
-# Example usage
+# usage
 sd_path = 'g://'  # Change this to the actual path of the SD card
 camera_model = match_camera_model(sd_path, camera_data)
 print(f"The SD card is matched with: {camera_model}")
