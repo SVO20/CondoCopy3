@@ -1,3 +1,9 @@
+"""
+Development and testing stand of the copy/move function.
+
+Creating files.
+"""
+
 import os
 import random
 

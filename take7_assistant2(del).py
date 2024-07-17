@@ -1,4 +1,12 @@
+"""
+Development and testing stand of the copy/move function.
+
+Creating files.
+"""
+
+
 import os
+
 
 filelist_path = "filelist.txt"
 
@@ -34,5 +42,7 @@ if os.path.exists(filelist_path):
             print(f"Deleted file from the second disk: {disk2_file_path}")
 
     print("All files successfully deleted.")
+    os.remove(filelist_path)
+    print(f"{os.path.basename(filelist_path)} successfully deleted.")
 else:
     print(f"File {filelist_path} not found.")
