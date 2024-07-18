@@ -2,11 +2,11 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 
-def dtstring_to_compactformat(date_str: str, utc: int = 3) -> Optional[str]:
+def dtstring_to_compactformat(date, utc: int = 3) -> Optional[str]:
     """/GPT-assisted/
     Convert various date-time formats to compact standard YYYYMMDD_HHMMSS format.
 
-    :param date_str: The date-time string to be converted.
+    :param date: The date-time string to be converted.
     :param utc: Time shift (poisitive or negative)
     :return: The date-time string in YYYYMMDD_HHMMSS format or None if conversion is not possible.
     """
@@ -53,18 +53,30 @@ def dtstring_to_compactformat(date_str: str, utc: int = 3) -> Optional[str]:
         "%Y%m%dT%H%MZ",            # Example: 20230718T1430Z (Compact ISO 8601 without seconds and Zulu time)
         "%Y%m%dT%H%M%z"            # Example: 20230718T1430+0200 (Compact ISO 8601 without seconds and UTC offset)
     ]
-    date_str = str(date_str)
-
-    is_utc_time = date_str.find("UTC") != -1
+    is_utc_time = str(date).find("UTC") != -1
     if is_utc_time:
         delta = timedelta(hours=utc)
     else:
         delta = timedelta(hours=0)
-    print(f"OK {date_str=}")
+
+    # Check if the date is a float, which might represent a UNIX timestamp
+    if isinstance(date, float):
+        try:
+            # Convert UNIX timestamp to datetime
+            dt = datetime.utcfromtimestamp(date)
+            # Apply the UTC offset
+            dt += timedelta(hours=utc)
+            return dt.strftime("%Y%m%d_%H%M%S")
+        except Exception as e:
+            return None  # Return None if conversion fails
+
+    date = str(date)
+
+    print(f"OK {date=}")
     for fmt in formats:
         try:
             # Try to parse the date string with the current format
-            dt = datetime.strptime(date_str, fmt)
+            dt = datetime.strptime(date, fmt)
             dt = dt + delta
 
             if '%S' in fmt:
