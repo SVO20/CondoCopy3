@@ -2,7 +2,7 @@
 
 ## Overview
 
-The format `YYYYMMDD_HHMMSS` is a variation of ISO 8601, commonly used as a convention for naming files on Android devices. This format includes the year, month, day, hour, minute, and second without timezone offsets and milliseconds. It uses an underscore to separate the date and time components, making it widely adopted among smartphone manufacturers for filesystem compatibility.
+The format `YYYYMMDD_HHMMSS` is a variation of ISO 8601, commonly used as a convention for naming files on Android devices. This format includes the year, month, day, hour, minute, and second without timezone offsets and milliseconds. It uses an underscore to separate the date and time components, making it widely adopted among smartphone manufacturers for naming unification.
 
 ## Example
 
