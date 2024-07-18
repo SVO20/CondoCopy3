@@ -2,53 +2,57 @@ import os
 from pymediainfo import MediaInfo
 from datetime import datetime
 
+from compact_datetime import dtstring_to_compactformat
+
 
 def get_file_type(file_path) -> str:
-    """Determine if the file is image, video, or other type using MediaInfo
+    """Determine if the file is image, video, audio, or other type using MediaInfo
 
-    :return: str  in  ( 'Image', 'Video', 'Other' )
+    :return: str  in  ( 'Image', 'Video', 'Audio', 'Other' )
     """
     minf = MediaInfo.parse(file_path)
     for track in minf.tracks:
         # Return first specific track found
         if track.track_type == "Image":
             return "Image"
-        elif track.track_type == "Video":
+        elif track.track_type == "Video":       # if not an image
             return "Video"
-    # Place for additional analyze logic
+        elif track.track_type == "Audio":       # if not an image and not a video
+            return "Audio"
     # Default
     return "Other"
 
 
-def extract_key_datetime(file_path, file_type: str = 'Other'):
+def extract_key_datetime(file_path):
     """Extract key date/time from the metadata of image or video file, if available.
     Usually 'taken' or 'encoded' or 'modified' date/time
 
-    :return  key date/time in if available, otherwise None
+    :return  key date/time in if available in YYYYMMDD_HHMMSS compact_format, otherwise None
     """
     if not os.path.isfile(file_path):
-        print(f"The file {file_path} does not exist or is a directory.")
-        return None, "Other"
+        # print(f"The file {file_path} does not exist or is a directory.")
+        return None
 
-    file_type = get_file_type(file_path)
-    print(f"----------->  ", file_path, file_type)
     try:
+        file_type = get_file_type(file_path)
         media_info = MediaInfo.parse(file_path)
+        #print(os.path.basename(file_path), f"   ----------->  ", file_type)
+
         for track in media_info.tracks:
             if file_type == "Image":
-                # For images, look for EXIF 'Date/Time Original' or similar tags
-                date = track.other_date_taken or track.other_date_time_original or track.encoded_date
-                if date:
-                    return date[0], "Image"  # Return the first available date
+                # For images, look for EXIF 'Date/Time Original' or 'Encoded date' or similar tags
+                if dt_information := track.other_date_taken or track.other_date_time_original or track.encoded_date:
+                    return dt_information
             elif file_type == "Video":
                 # For videos, look for 'Encoded date' or similar tags
-                date = track.encoded_date or track.tagged_date or track.file_last_modification_date
-                if date:
-                    return date, "Video"
+                if dt_information := track.encoded_date or track.tagged_date or track.file_last_modification_date:
+                    return dt_information
+
     except Exception as e:
         print(f"An error occurred while processing the file {file_path}: {e}")
         raise
-    return None, file_type
+    # Default
+    return None
 
 
 def generate_new_filename(file_path):
@@ -57,36 +61,31 @@ def generate_new_filename(file_path):
     :param file_path: Path to the file
     :return: New filename
     """
-    taken_date, file_type = extract_key_datetime(file_path)
-    dir_name, original_filename = os.path.split(file_path)
+    file_type = get_file_type(file_path)
+    key_datetime = extract_key_datetime(file_path)
+    compact_datetime = dtstring_to_compactformat(key_datetime)
+
+    print(f"{file_type} --- {key_datetime} --- {compact_datetime}")
+
+    original_filename = os.path.basename(file_path)
     name, ext = os.path.splitext(original_filename)
 
     if file_type in ["Image", "Video"]:
-        if taken_date:
-            # Remove milliseconds and timezone if present
-            taken_date = taken_date.split('.')[0]
-            try:
-                if 'T' in taken_date:
-                    # ISO 8601 datetime format
-                    date_str = datetime.strptime(taken_date, '%Y-%m-%dT%H:%M:%S').strftime('%Y%m%d_%H%M%S')
-                else:
-                    # Regular datetime format
-                    date_str = datetime.strptime(taken_date, '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d_%H%M%S')
-                new_filename = f"{date_str}_{name}{ext}"
-            except ValueError:
-                # Handle case where the date does not contain time
-                print(f"Invalid taken date (no time): {taken_date}, using modification date instead.")
-                mod_time = os.path.getmtime(file_path)
-                date_str = datetime.fromtimestamp(mod_time).strftime('%Y%m%d_%H%M%S')
-                new_filename = f"{date_str}-modif-{name}{ext}"
+        if key_datetime:
+            # compact_datetime used
+            new_filename = f"{compact_datetime}_{name}{ext}"
+            return new_filename
         else:
-            mod_time = os.path.getmtime(file_path)
-            date_str = datetime.fromtimestamp(mod_time).strftime('%Y%m%d_%H%M%S')
-            new_filename = f"{date_str}-modif-{name}{ext}"
+            # modified datetime used if  key_datetime  is None
+            modif_time = os.path.getmtime(file_path)
+            compact_datetime = dtstring_to_compactformat(modif_time)
+            new_filename = f"{compact_datetime}-modif-{name}{ext}"
+            return new_filename
     else:
-        new_filename = f"placeholder_{name}{ext}"
+        # Other files
+        new_filename = f"{name}{ext}"
 
-    return os.path.join(dir_name, new_filename)
+    return new_filename
 
 
 def analyze_directory(directory):

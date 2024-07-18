@@ -27,10 +27,11 @@ This naming convention is widely used for:
 
 It is primarily used to ensure the sorting of a large number of files using system tools without the need for third-party systems. It allows you to accurately determine when a particular material was captured on an imaginary timeline just by looking at the list of files in Explorer, regardless of how extensive it is.
 
-
 ## Usage in CondoCopy3 App
 
 This format will be used by the CondoCopy3 app to rename files obtained from SD cards and devices. The date and time will be placed at the **beginning** of the filename to facilitate sorting. After the date and time, any separator such as '_', '--', '--modif--' (for cases where the date and time of capture are unknown, but the last modification time is available), etc., can be used. Following the separator, any user-defined or original filename (as it was on the device) can be included.
+
+In the context of the CondoCopy3 project, this date and time format will be referred to as *'compactformat'* or *'compact_format'* .
 
 ### Examples
 
