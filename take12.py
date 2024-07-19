@@ -1,6 +1,7 @@
 import os
 from pymediainfo import MediaInfo
 from datetime import datetime
+import piexif
 
 from compact_datetime import dtstring_to_compactformat
 
@@ -25,12 +26,12 @@ def get_file_type(file_path) -> str:
 
 def extract_key_datetime(file_path):
     """Extract key date/time from the metadata of image or video file, if available.
-    Usually 'taken' or 'encoded' or 'modified' date/time
+    Usually 'taken', 'encoded', or 'modified' date/time
 
-    :return  key date/time in if available in YYYYMMDD_HHMMSS compact_format, otherwise None
+    :return: Key date/time in YYYYMMDD_HHMMSS compact format, otherwise None
     """
     if not os.path.isfile(file_path):
-        # print(f"The file {file_path} does not exist or is a directory.")
+        # The file does not exist or is a directory
         return None
 
     try:
@@ -38,19 +39,31 @@ def extract_key_datetime(file_path):
         media_info = MediaInfo.parse(file_path)
         #print(os.path.basename(file_path), f"   ----------->  ", file_type)
 
-        for track in media_info.tracks:
-            if file_type == "Image":
-                # For images, look for EXIF 'Date/Time Original' or 'Encoded date' or similar tags
+        if file_type == "Image":
+            # Try to extract EXIF data using piexif
+            try:
+                exif_dict = piexif.load(file_path)
+                dt_original = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeOriginal)
+                dt_digitized = exif_dict['Exif'].get(piexif.ExifIFD.DateTimeDigitized)
+                dt_taken = dt_original or dt_digitized
+                if dt_taken:
+                    #print('exif_inf=', dt_taken.decode('utf-8'))
+                    return dt_taken.decode('utf-8')
+            except (piexif.InvalidImageDataError, KeyError):
+                pass  # Format is not supported by piexif or no EXIF data found
 
-                # or track.file_last_modification_date
-                if dt_information := track.other_date_taken or track.other_date_time_original or track.encoded_date :
-                    print('dt_image_inf=', dt_information)
+            # If piexif fails or no EXIF data, use  MediaInfo
+            for track in media_info.tracks:
+                if dt_information := track.other_date_taken or track.other_date_time_original or track.encoded_date:
+                    #print('dt_image_inf=', dt_information)
                     return dt_information
-            elif file_type == "Video":
-                # For videos, look for 'Encoded date' or similar tags
-                # or track.file_last_modification_date
+
+        elif file_type == "Video":
+            # For videos, look for 'Encoded date' or similar tags
+            # or track.file_last_modification_date
+            for track in media_info.tracks:
                 if dt_information := track.encoded_date or track.tagged_date:
-                    print('dt_video_inf=', dt_information)
+                    #print('dt_video_inf=', dt_information)
                     return dt_information
 
     except Exception as e:
@@ -70,7 +83,7 @@ def generate_new_filename(file_path):
     key_datetime = extract_key_datetime(file_path)
     compact_datetime = dtstring_to_compactformat(key_datetime)
 
-    print(f"{file_type} --- {key_datetime} --- {compact_datetime}")
+    #print(f"{file_type} --- {key_datetime} --- {compact_datetime}")
 
     original_filename = os.path.basename(file_path)
     name, ext = os.path.splitext(original_filename)
