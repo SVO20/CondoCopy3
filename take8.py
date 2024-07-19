@@ -1,3 +1,10 @@
+"""
+This module provides asynchronous file copy functionality using  aiofiles.
+
+includes the functions to read a file list, determine buffer sizes, copy files with file stats,
+and manage file copy tasks.
+"""
+
 import os
 import shutil
 import asyncio

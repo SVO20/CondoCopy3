@@ -1,3 +1,11 @@
+"""
+This module provides asynchronous file copy and move functionality with ENCHANCED file comparison
+and concurrency control.
+
+includes the functions to read a file list, determine buffer sizes, copy and move files with file stats,
+and manage concurrent file operations.
+"""
+
 import os
 import shutil
 import asyncio

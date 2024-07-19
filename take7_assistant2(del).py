@@ -1,7 +1,7 @@
 """
-Development and testing stand of the copy/move function.
+Development and testing stand for the copy/move function.
 
-Creating files.
+This script deletes specified files from two disks.
 """
 
 

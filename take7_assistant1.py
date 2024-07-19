@@ -1,7 +1,8 @@
 """
-Development and testing stand of the copy/move function.
+Development and testing stand for the copy/move function.
 
-Creating files.
+This script creates files of various sizes
+and saves their paths along with a second disk path to a file.
 """
 
 import os

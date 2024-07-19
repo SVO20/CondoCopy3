@@ -1,3 +1,10 @@
+"""
+Module provides functionality to extract a compact datetime string from a various datetime formats.
+
+includes the function to extract and validate datetime components from a string
+and return a formatted compact datetime string.
+"""
+
 import re
 from datetime import datetime
 from typing import Optional

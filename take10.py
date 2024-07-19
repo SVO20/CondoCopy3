@@ -1,10 +1,11 @@
 """
-SD-cards insertion monitoring and identification
-using async console (curses)
+SD-cards insertion monitoring and identification using async console (curses).
 
-curses on windows:
-                    pip install windows-curses
-AND
+To use curses on Windows:
+1. Install windows-curses:
+pip install windows-curses
+
+2. Refer to:
 https://stackoverflow.com/questions/16740385/python-curses-redirection-is-not-supported
 https://i.sstatic.net/hQ814.png
 in PyCharm IDE

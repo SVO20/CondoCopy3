@@ -1,4 +1,11 @@
+"""
+Module provides a system tray application that monitors SD card insertion
+and analyzes the SD card structure.
+
+"""
+
 import sys
+
 import os
 import asyncio
 import psutil

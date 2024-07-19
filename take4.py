@@ -1,3 +1,10 @@
+"""
+Module provides functionality to match SD card structures with camera models.
+
+includes the functions to load camera configurations, get directory structures,
+calculate weights for token matching, and identify the camera model based on the SD card structure.
+"""
+
 from typing import Optional
 import toml
 import os
