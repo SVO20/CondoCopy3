@@ -56,7 +56,8 @@ def extract_key_datetime(file_path):
             for track in media_info.tracks:
                 if dt_information := track.other_date_taken or track.other_date_time_original or track.encoded_date:
                     #print('dt_image_inf=', dt_information)
-                    return dt_information
+                    return dt_information[0] if isinstance(dt_information, list) else dt_information
+
 
         elif file_type == "Video":
             # For videos, look for 'Encoded date' or similar tags
@@ -64,7 +65,8 @@ def extract_key_datetime(file_path):
             for track in media_info.tracks:
                 if dt_information := track.encoded_date or track.tagged_date:
                     #print('dt_video_inf=', dt_information)
-                    return dt_information
+                    return dt_information[0] if isinstance(dt_information, list) else dt_information
+
 
     except Exception as e:
         print(f"An error occurred while processing the file {file_path}: {e}")
@@ -86,24 +88,24 @@ def generate_new_filename(file_path):
     #print(f"{file_type} --- {key_datetime} --- {compact_datetime}")
 
     original_filename = os.path.basename(file_path)
-    name, ext = os.path.splitext(original_filename)
 
     if file_type in ["Image", "Video"]:
-        if key_datetime:
-            # compact_datetime used
-            new_filename = f"{compact_datetime}_{name}{ext}"
-            return new_filename
+        if key_datetime is not None:
+            if original_filename.startswith(key_datetime):
+                # no renaming needed if filename already starts with EXACT key_datetime
+                return original_filename
+            else:
+                # compact_datetime added as prefix
+                return f"{compact_datetime}_{original_filename}"
         else:
-            # modified datetime used if  key_datetime  is None
+            # 'modified' datetime used if  key_datetime  is None
             modif_time = os.path.getmtime(file_path)
             compact_datetime = dtstring_to_compactformat(modif_time)
-            new_filename = f"{compact_datetime}-modif-{name}{ext}"
-            return new_filename
+            # compact_datetime added as prefix
+            return f"{compact_datetime}_{original_filename}"
     else:
         # Other files
-        new_filename = f"{name}{ext}"
-
-    return new_filename
+        return original_filename
 
 
 def analyze_directory(directory):
