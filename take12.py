@@ -41,11 +41,16 @@ def extract_key_datetime(file_path):
         for track in media_info.tracks:
             if file_type == "Image":
                 # For images, look for EXIF 'Date/Time Original' or 'Encoded date' or similar tags
-                if dt_information := track.other_date_taken or track.other_date_time_original or track.encoded_date:
+
+                # or track.file_last_modification_date
+                if dt_information := track.other_date_taken or track.other_date_time_original or track.encoded_date :
+                    print('dt_image_inf=', dt_information)
                     return dt_information
             elif file_type == "Video":
                 # For videos, look for 'Encoded date' or similar tags
-                if dt_information := track.encoded_date or track.tagged_date or track.file_last_modification_date:
+                # or track.file_last_modification_date
+                if dt_information := track.encoded_date or track.tagged_date:
+                    print('dt_video_inf=', dt_information)
                     return dt_information
 
     except Exception as e:

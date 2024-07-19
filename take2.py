@@ -30,7 +30,7 @@ class TrayApp:
 
         ## === ASYNC LOOP ===
         # Initialize the asyncio event loop
-        self.loop_ = asyncio.get_event_loop()
+        self._loop = asyncio.get_event_loop()
         # Create a flag to ensure the Qt app is alive
         self.running = True
 
@@ -39,9 +39,9 @@ class TrayApp:
 
     def run(self):
         # Schedule the SD card monitoring task
-        self.loop_.create_task(self.monitor_sd_insertion(on_sd_inserted))
+        self._loop.create_task(self.monitor_sd_insertion(on_sd_inserted))
         # Run the Qt application and asyncio event loop together
-        self.loop_.run_until_complete(self.qt_life_cycle())
+        self._loop.run_until_complete(self.qt_life_cycle())
 
     async def monitor_sd_insertion(self, callback):
         while self.running:

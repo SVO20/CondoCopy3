@@ -8,6 +8,7 @@ def dtstring_to_compactformat(date, utc: int = 3) -> Optional[str]:
 
     :param date: The date-time string to be converted.
     :param utc: Time shift (poisitive or negative)
+                Default is UTC+3 time zone, Standard Time (Moscow/Ankara), non-Daylight Saving
     :return: The date-time string in YYYYMMDD_HHMMSS format or None if conversion is not possible.
     """
     formats = [
@@ -53,26 +54,33 @@ def dtstring_to_compactformat(date, utc: int = 3) -> Optional[str]:
         "%Y%m%dT%H%MZ",            # Example: 20230718T1430Z (Compact ISO 8601 without seconds and Zulu time)
         "%Y%m%dT%H%M%z"            # Example: 20230718T1430+0200 (Compact ISO 8601 without seconds and UTC offset)
     ]
-    is_utc_time = str(date).find("UTC") != -1
-    if is_utc_time:
-        delta = timedelta(hours=utc)
-    else:
-        delta = timedelta(hours=0)
+    # Check the date absense
+    if not date:
+        return None
 
     # Check if the date is a float, which might represent a UNIX timestamp
     if isinstance(date, float):
         try:
             # Convert UNIX timestamp to datetime
             dt = datetime.utcfromtimestamp(date)
-            # Apply the UTC offset
-            dt += timedelta(hours=utc)
             return dt.strftime("%Y%m%d_%H%M%S")
         except Exception as e:
             return None  # Return None if conversion fails
 
     date = str(date)
 
-    print(f"OK {date=}")
+    # Check if the string with date contain  'UTC'  mark
+    is_utc_time = date.find("UTC") != -1
+    if is_utc_time:
+        # Apply UTC time shift
+        # !default! is  UTC+3  - Moscow/Ankara standart time
+        delta = timedelta(hours=utc)
+        # Clear 'UTC' mark
+        date = date.replace('UTC','').strip()
+    else:
+        delta = timedelta(hours=0)
+
+    # Check if the datetime corresponds one of the formats (from more frequent used to less /GPT/)
     for fmt in formats:
         try:
             # Try to parse the date string with the current format
