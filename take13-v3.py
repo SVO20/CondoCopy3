@@ -1,30 +1,30 @@
 """
-Module provides functionality to extract a compact datetime string from a various datetime formats.
+Module provides functionality to extract a compact datetime string from a filename
 
-includes the function to extract and validate datetime components from a string
-and return a formatted compact datetime string.
 """
 import os.path
 import re
 from datetime import datetime
 from typing import Optional
 
+
 def extract_compact_datetime(str_filename: str) -> Optional[str]:
+    # Extract filename without extention
     dt_str, _ = os.path.splitext(os.path.basename(str_filename))
 
     # Regular expression pattern for datetime
     datetime_pattern = (
         r"(.*?)"
         r"(?P<year>20\d{2}|\d{2})"               # year
-        r"(?P<sep1>[^\w\|!?<>\s]|[ _])?"          #  separator
+        r"(?P<sep1>[^\w\|!?<>\s]|[ _])?"         # separator
         r"(?P<month>0[1-9]|1[0-2])"              # month
-        r"(?P<sep2>[^\w\|!?<>\s]|[ _])?"          #  separator
+        r"(?P<sep2>[^\w\|!?<>\s]|[ _])?"         # separator
         r"(?P<day>0[1-9]|[12]\d|3[01])"          # day
-        r"(?P<sep3>[-Tt_ ])?"                             # date-time separator
+        r"(?P<sep3>[-Tt_ ])?"                    # date-time separator
         r"(?P<hour>[01]\d|2[0-3])?"              # hour
-        r"(?P<sep4>[^\w\/|!?<>\s]|[:._ ])?"                               # hour-minute separator
+        r"(?P<sep4>[^\w\/|!?<>\s]|[:._ ])?"      # hour-minute separator
         r"(?P<minute>[0-5]\d)?"                  # minute
-        r"(?P<sep5>[^\w\/|!?<>\s]|[:._ ])?"                               # minute-second separator
+        r"(?P<sep5>[^\w\/|!?<>\s]|[:._ ])?"      # minute-second separator
         r"(?P<second>[0-5]\d)?"                  # second
     )
 
@@ -48,21 +48,12 @@ def extract_compact_datetime(str_filename: str) -> Optional[str]:
 
     # Check separators rules
     if not sep1 == sep2 or not (sep4 == sep5 or not sep5):
-        print(
-            f"year: {year}, sep1: {sep1}, month: {month}, sep2: {sep2}, day: {day}, sep3: {sep3}, hour: {hour}, sep4: {sep4}, minute: {minute}, sep5: {sep5}, second: {second}")
-
         return None
     if sep3 == '' != sep2 or sep3 == '' != sep4:
-        print(
-            f"year: {year}, sep1: {sep1}, month: {month}, sep2: {sep2}, day: {day}, sep3: {sep3}, hour: {hour}, sep4: {sep4}, minute: {minute}, sep5: {sep5}, second: {second}")
-
         return None
 
     # Check if mandatory components are None
     if year is None or month is None or day is None:
-        print(
-            f"year: {year}, sep1: {sep1}, month: {month}, sep2: {sep2}, day: {day}, sep3: {sep3}, hour: {hour}, sep4: {sep4}, minute: {minute}, sep5: {sep5}, second: {second}")
-
         return None
 
     # Adjust the year if it's in YY format
@@ -73,11 +64,11 @@ def extract_compact_datetime(str_filename: str) -> Optional[str]:
     try:
         datetime(int(year), int(month), int(day), int(hour), int(minute), int(second))
     except (ValueError, TypeError):
-        print(f"year: {year}, sep1: {sep1}, month: {month}, sep2: {sep2}, day: {day}, sep3: {sep3}, hour: {hour}, sep4: {sep4}, minute: {minute}, sep5: {sep5}, second: {second}")
         return None
 
     # Return the formatted date-time string
     return f"{year}{month}{day}_{hour}{minute}{second}"
+
 
 def load_test_data(filename):
     with open(filename, 'r') as file:
