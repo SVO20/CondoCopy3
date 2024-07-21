@@ -4,15 +4,81 @@ and analyzes the SD card structure.
 
 """
 
-import sys
-
-import os
 import asyncio
-import psutil
-from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction
-from PyQt5.QtGui import QIcon, QCursor
+import os
+import sys
+import zlib
+from collections import deque
 
-from logger import omit, trace, debug, info, success, warning, error
+import psutil
+from PyQt5.QtGui import QCursor, QIcon
+from PyQt5.QtWidgets import (QApplication, QDialog, QLabel, QMenu, QPushButton, QSystemTrayIcon,
+                             QVBoxLayout, QAction)
+
+from logger import debug, error, info, omit, success, trace, warning
+from take10 import get_volume_info_kernel32, get_folder_creation_date
+
+
+# deque_removables format --v
+# deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
+deque_removables = deque()
+
+
+async def get_removable_drives() -> list:
+    partitions = psutil.disk_partitions()
+    removable_drives = [p.device for p in partitions if 'removable' in p.opts]
+    return removable_drives
+
+
+def generate_id(drive):
+    """Generates a unique ID for a drive based on its volume information and
+     creation dates of specific folders (if presented on drive and available to retrieve).
+
+    The ID is constructed using the following steps:
+    1. Get volume label, volume serial number, and total size of the drive
+    2. Get the distinst folders creation dates ("" if there is no folder on the drive) and
+        concat into a single string
+    3. Concat the volume label, volume serial number, total size, and folder creation dates
+        into a single string
+    4. Calculate the CRC32 checksum of the combined string
+    5. Use the first six characters of the CRC32 checksum (in uppercase) as a suffix for the ID
+    6. Compose the final ID in the format "VOLUME_LABEL_HASH_SUFFIX".
+    """
+
+    # Folders which creation dates to be used as unique marks  (if exists and available)
+    distinst_folders = ("DCIM", "MISC", "Android")
+
+    volume_label, volume_serial, total_size = get_volume_info_kernel32(drive)
+    str_creation_dates = "".join([get_folder_creation_date(os.path.join(drive, folder))
+                                  for folder in distinst_folders])
+
+    # Create the string to be hashed and calculate its CRC32 checksum
+    combined_str = f"{volume_label}{volume_serial}{total_size}{str_creation_dates}"
+    crc32_hash = zlib.crc32(combined_str.encode())
+    # use six first chars
+    hash_suffix = f"{crc32_hash:08x}"[:6].upper()
+
+    # compose and return ID
+    return f"{volume_label}_{hash_suffix}"
+
+
+class SDCardDialog(QDialog):
+    def __init__(self, drive, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("SD Card Inserted")
+        self.drive = drive
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+        message = QLabel(f"SD card inserted: {self.drive}")
+        layout.addWidget(message)
+
+        button_ok = QPushButton("OK")
+        button_ok.clicked.connect(self.accept)
+        layout.addWidget(button_ok)
+
+        self.setLayout(layout)
 
 
 class TrayApp:
@@ -46,25 +112,42 @@ class TrayApp:
 
     def run(self):
         # Schedule the SD card monitoring task
-        self._loop.create_task(self.monitor_sd_insertion(on_sd_inserted))
+        self._loop.create_task(self.monitor_sd_insertion(self.on_sd_inserted))
         # Run the Qt application and asyncio event loop together
         self._loop.run_until_complete(self.qt_life_cycle())
 
-    async def monitor_sd_insertion(self, callback):
-        while self.running:
-            trace("Checking drives... == SIMPLE ==")
-            drive_list = []
-            # Get a list of all connected disk partitions
-            for partition in psutil.disk_partitions():
-                # Check if the disk is removable by looking for 'removable' in partition options
-                if 'removable' in partition.opts:
-                    drive_list.append(partition.device)
+    async def update_drives(self):
+        set_current_removables = set(await get_removable_drives())
+        set_deque_removables = {drive['device'] for drive in deque_removables}
+        updated = False
 
-            # Check each removable drive to see if it exists and is accessible
-            for drive in drive_list:
-                if os.path.exists(drive):
-                    # BLOCKING
-                    callback(drive)  # If the drive is found
+        # Add new drives
+        for drive in set_current_removables - set_deque_removables:
+            drive_id = generate_id(drive)
+
+            # deque_removables format --v
+            # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
+            deque_removables.append({'device': drive, 'id': drive_id})
+            updated = True
+
+        # Remove disconnected drives
+        for drive in list(deque_removables):
+            if drive['device'] not in set_current_removables:
+                deque_removables.remove(drive)
+                updated = True
+
+        return updated
+
+    async def refresh_display(self, deque_removables):
+        # todo Refresh window state/content
+        pass
+
+    async def monitor_sd_insertion(self, callback):
+        while True:
+            updated = await self.update_drives(self.deque_removables)
+            if updated:
+                await self.refresh_display(self.deque_removables)
+            await asyncio.sleep(1)
 
             # Wait for 2 seconds
             await asyncio.sleep(2)
@@ -91,37 +174,21 @@ class TrayApp:
             # v-- non-blocking --v
             self.menu.popup(QCursor.pos())
 
-def on_sd_inserted(drive):
-    # Analyze the SD card and notify the user
-    analyze_sd_card(drive)
-    notify_user(f"SD card analyzed: {drive}")
-    info(f"SD card analyzed: {drive}")
+    async def on_sd_inserted(self, drive):
+        await self.analyze_sd_card(drive)
+        self.notify_user(f"SD card analyzed: {drive}")
+        info(f"SD card analyzed: {drive}")
 
+        # Показать окно с кнопками
+        dialog = SDCardDialog(drive)
+        dialog.exec_()
 
-def analyze_sd_card(drive_path):
-    # # Define the required structure of folders and files on the SD card
-    # required_structure = ["folder1", "folder2", "file1.txt"]
-    # found_items = []
-    #
-    # # Walk through the drive path and check for required folders and files
-    # for root, dirs, files in os.walk(drive_path):
-    #     for name in dirs + files:
-    #         if name in required_structure:
-    #             found_items.append(name)
-    #
-    # # Check if the required structure is present
-    # if set(required_structure).issubset(set(found_items)):
-    #     print("Required structure found.")
-    #     # Trigger notification and logging here
-    # else:
-    #     print("Required structure not found.")
-    pass
+    async def analyze_sd_card(self, drive_path):
+        # Здесь можно выполнить длительную операцию по анализу SD карты
+        await asyncio.sleep(1)
 
-
-def notify_user(message):
-    # # Placeholder for actual notification code
-    # print(f"Notification: {message}")
-    pass
+    def notify_user(self, message):
+        pass
 
 
 if __name__ == "__main__":
