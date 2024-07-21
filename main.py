@@ -1,65 +1,26 @@
 """
-Module provides a system tray application that monitors SD card insertion
-and analyzes the SD card structure.
+CondoCopy3 v0.0
+
 
 """
-
 import asyncio
 import os
 import sys
 import zlib
 from collections import deque
 
-import psutil
 from PyQt5.QtGui import QCursor, QIcon
-from PyQt5.QtWidgets import (QApplication, QDialog, QLabel, QMenu, QPushButton, QSystemTrayIcon,
-                             QVBoxLayout, QAction)
+from PyQt5.QtWidgets import (QAction, QApplication, QDialog, QLabel, QMenu,
+                             QPushButton, QSystemTrayIcon, QVBoxLayout)
 
+from detectors import get_removable_drives, generate_id, match_camera_model
+from initialization import d_cameras
 from logger import debug, error, info, omit, success, trace, warning
-from take10 import get_volume_info_kernel32, get_folder_creation_date
 
 
 # deque_removables format --v
 # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
 deque_removables = deque()
-
-
-async def get_removable_drives() -> list:
-    partitions = psutil.disk_partitions()
-    removable_drives = [p.device for p in partitions if 'removable' in p.opts]
-    return removable_drives
-
-
-def generate_id(drive):
-    """Generates a unique ID for a drive based on its volume information and
-     creation dates of specific folders (if presented on drive and available to retrieve).
-
-    The ID is constructed using the following steps:
-    1. Get volume label, volume serial number, and total size of the drive
-    2. Get the distinst folders creation dates ("" if there is no folder on the drive) and
-        concat into a single string
-    3. Concat the volume label, volume serial number, total size, and folder creation dates
-        into a single string
-    4. Calculate the CRC32 checksum of the combined string
-    5. Use the first six characters of the CRC32 checksum (in uppercase) as a suffix for the ID
-    6. Compose the final ID in the format "VOLUME_LABEL_HASH_SUFFIX".
-    """
-
-    # Folders which creation dates to be used as unique marks  (if exists and available)
-    distinst_folders = ("DCIM", "MISC", "Android")
-
-    volume_label, volume_serial, total_size = get_volume_info_kernel32(drive)
-    str_creation_dates = "".join([get_folder_creation_date(os.path.join(drive, folder))
-                                  for folder in distinst_folders])
-
-    # Create the string to be hashed and calculate its CRC32 checksum
-    combined_str = f"{volume_label}{volume_serial}{total_size}{str_creation_dates}"
-    crc32_hash = zlib.crc32(combined_str.encode())
-    # use six first chars
-    hash_suffix = f"{crc32_hash:08x}"[:6].upper()
-
-    # compose and return ID
-    return f"{volume_label}_{hash_suffix}"
 
 
 class SDCardDialog(QDialog):
@@ -125,6 +86,10 @@ class TrayApp:
         for drive in set_current_removables - set_deque_removables:
             drive_id = generate_id(drive)
 
+            camera_model = match_camera_model(drive, d_cameras)
+            success(f"The SD card is matched with: {camera_model}")
+            # todo add camera_model to deque_removables
+
             # deque_removables format --v
             # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
             deque_removables.append({'device': drive, 'id': drive_id})
@@ -171,7 +136,6 @@ class TrayApp:
     def on_tray_icon_activated(self, reason):
         # Left click handling
         if reason == QSystemTrayIcon.Trigger:
-            # v-- non-blocking --v
             self.menu.popup(QCursor.pos())
 
     async def on_sd_inserted(self, drive):
@@ -179,12 +143,13 @@ class TrayApp:
         self.notify_user(f"SD card analyzed: {drive}")
         info(f"SD card analyzed: {drive}")
 
-        # Показать окно с кнопками
+        # Show dialog window
         dialog = SDCardDialog(drive)
+        # v-- BLOCKING! --v
         dialog.exec_()
 
     async def analyze_sd_card(self, drive_path):
-        # Здесь можно выполнить длительную операцию по анализу SD карты
+        # placeholder for analyze
         await asyncio.sleep(1)
 
     def notify_user(self, message):

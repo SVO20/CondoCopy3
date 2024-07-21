@@ -2,7 +2,6 @@
 Module provides functionality to detect removables and match theis dir structures with camera model
 
 """
-
 import ctypes
 import os
 import zlib
@@ -11,10 +10,16 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 import numpy as np
+import psutil
 import toml
 
+from initialization import d_cameras
 
 
+async def get_removable_drives() -> list:
+    partitions = psutil.disk_partitions()
+    removable_drives = [p.device for p in partitions if 'removable' in p.opts]
+    return removable_drives
 
 
 def get_directories(start_path) -> list:
