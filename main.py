@@ -1,7 +1,6 @@
 """
 CondoCopy3 v0.0
 
-
 """
 import asyncio
 import os
@@ -9,37 +8,19 @@ import sys
 import zlib
 from collections import deque
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QCursor, QIcon
 from PyQt5.QtWidgets import (QAction, QApplication, QDialog, QLabel, QMenu,
                              QPushButton, QSystemTrayIcon, QVBoxLayout)
 
-from detectors import get_removable_drives, generate_id, match_camera_model
-from initialization import d_cameras
 from logger import debug, error, info, omit, success, trace, warning
+from initialization import d_cameras
+from detectors import get_removable_drives, generate_id, match_camera_model
 
 
 # deque_removables format --v
 # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
 deque_removables = deque()
-
-
-class SDCardDialog(QDialog):
-    def __init__(self, drive, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("SD Card Inserted")
-        self.drive = drive
-        self.init_ui()
-
-    def init_ui(self):
-        layout = QVBoxLayout()
-        message = QLabel(f"SD card inserted: {self.drive}")
-        layout.addWidget(message)
-
-        button_ok = QPushButton("OK")
-        button_ok.clicked.connect(self.accept)
-        layout.addWidget(button_ok)
-
-        self.setLayout(layout)
 
 
 class TrayApp:
@@ -72,57 +53,64 @@ class TrayApp:
         self.last_drive_list = []
 
     def run(self):
-        # Schedule the SD card monitoring task
-        self._loop.create_task(self.monitor_sd_insertion(self.on_sd_inserted))
+        # Schedule the monitoring task
+        self._loop.create_task(self.monitor_removables_atask())
         # Run the Qt application and asyncio event loop together
-        self._loop.run_until_complete(self.qt_life_cycle())
+        self._loop.run_until_complete(self.qt_life_cycle_atask())
 
-    async def update_drives(self):
-        set_current_removables = set(await get_removable_drives())
-        set_deque_removables = {drive['device'] for drive in deque_removables}
-        updated = False
-
-        # Add new drives
-        for drive in set_current_removables - set_deque_removables:
-            drive_id = generate_id(drive)
-
-            camera_model = match_camera_model(drive, d_cameras)
-            success(f"The SD card is matched with: {camera_model}")
-            # todo add camera_model to deque_removables
-
-            # deque_removables format --v
-            # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
-            deque_removables.append({'device': drive, 'id': drive_id})
-            updated = True
-
-        # Remove disconnected drives
-        for drive in list(deque_removables):
-            if drive['device'] not in set_current_removables:
-                deque_removables.remove(drive)
-                updated = True
-
-        return updated
-
-    async def refresh_display(self, deque_removables):
-        # todo Refresh window state/content
-        pass
-
-    async def monitor_sd_insertion(self, callback):
+    async def monitor_removables_atask(self):
         while True:
-            updated = await self.update_drives(self.deque_removables)
-            if updated:
-                await self.refresh_display(self.deque_removables)
+            # detect current
+            set_current_removables = set(await get_removable_drives())
+            # retrieve last
+            set_last_removables = {drive['device'] for drive in deque_removables}
+            # suppose no changes
+            is_updated = False
+
+            # Check for new connected removables
+            for drive in set_current_removables - set_last_removables:
+                drive_id = generate_id(drive)
+                camera_model = match_camera_model(drive, d_cameras)
+
+                # todo add camera_model to deque_removables
+
+                # deque_removables format --v
+                # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
+                deque_removables.append({'device': drive, 'id': drive_id})
+
+                success(f"The removable is matched with: {camera_model}")
+                is_updated = True
+
+            # Check for disconnected drives
+            for drive in list(deque_removables):
+                if drive['device'] not in set_current_removables:
+                    deque_removables.remove(drive)
+                    success(f"The removable [{drive['id']}] was disconnected")
+                    is_updated = True
+
+            # Handle changes in  deque_removables
+            trace(f"{deque_removables = }")
+            if is_updated:
+                await self.refresh_display_atask()
+
             await asyncio.sleep(1)
 
-            # Wait for 2 seconds
-            await asyncio.sleep(2)
-
-    async def qt_life_cycle(self):
+    async def qt_life_cycle_atask(self):
         # Run the Qt application intertnal events until the application quits
         debug(f"Qt application to run")
         while self.running:
             self.parent_app_.processEvents()
             await asyncio.sleep(0.1)
+
+    async def refresh_display_atask(self):
+        # Show dialog window
+
+        # placeholder for display logic
+        # todo display logic
+        dialog = SDCardDialog('A:')
+        dialog.setWindowModality(Qt.NonModal)
+        dialog.show()
+
 
     def exit(self):
         # Hide the tray icon and quit the application
@@ -138,22 +126,24 @@ class TrayApp:
         if reason == QSystemTrayIcon.Trigger:
             self.menu.popup(QCursor.pos())
 
-    async def on_sd_inserted(self, drive):
-        await self.analyze_sd_card(drive)
-        self.notify_user(f"SD card analyzed: {drive}")
-        info(f"SD card analyzed: {drive}")
 
-        # Show dialog window
-        dialog = SDCardDialog(drive)
-        # v-- BLOCKING! --v
-        dialog.exec_()
+class SDCardDialog(QDialog):
+    def __init__(self, drive, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("SD Card Inserted")
+        self.drive = drive
+        self.init_ui()
 
-    async def analyze_sd_card(self, drive_path):
-        # placeholder for analyze
-        await asyncio.sleep(1)
+    def init_ui(self):
+        layout = QVBoxLayout()
+        message = QLabel(f"SD card inserted: {self.drive}")
+        layout.addWidget(message)
 
-    def notify_user(self, message):
-        pass
+        button_ok = QPushButton("OK")
+        button_ok.clicked.connect(self.accept)
+        layout.addWidget(button_ok)
+
+        self.setLayout(layout)
 
 
 if __name__ == "__main__":
