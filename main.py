@@ -11,8 +11,6 @@ import asyncio
 import psutil
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction
 from PyQt5.QtGui import QIcon, QCursor
-import win32file
-import datetime
 
 from logger import omit, trace, debug, info, success, warning, error
 
@@ -90,8 +88,8 @@ class TrayApp:
     def on_tray_icon_activated(self, reason):
         # Left click handling
         if reason == QSystemTrayIcon.Trigger:
-            self.menu.exec_(QCursor.pos())
-
+            # v-- non-blocking --v
+            self.menu.popup(QCursor.pos())
 
 def on_sd_inserted(drive):
     # Analyze the SD card and notify the user
@@ -119,15 +117,11 @@ def analyze_sd_card(drive_path):
     #     print("Required structure not found.")
     pass
 
+
 def notify_user(message):
     # # Placeholder for actual notification code
     # print(f"Notification: {message}")
     pass
-
-def log_event(event_type, message):
-    # Append the event log with a timestamp and message
-    with open("event_log.txt", "a") as log_file:
-        log_file.write(f"{datetime.datetime.now()} - {event_type}: {message}\n")
 
 
 if __name__ == "__main__":
