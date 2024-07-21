@@ -14,6 +14,8 @@ from PyQt5.QtGui import QIcon, QCursor
 import win32file
 import datetime
 
+from logger import omit, trace, debug, info, success, warning, error
+
 
 class TrayApp:
     def __init__(self):
@@ -52,7 +54,7 @@ class TrayApp:
 
     async def monitor_sd_insertion(self, callback):
         while self.running:
-            print("Checking drives... == SIMPLE ==")
+            trace("Checking drives... == SIMPLE ==")
             drive_list = []
             # Get a list of all connected disk partitions
             for partition in psutil.disk_partitions():
@@ -71,6 +73,7 @@ class TrayApp:
 
     async def qt_life_cycle(self):
         # Run the Qt application intertnal events until the application quits
+        debug(f"Qt application to run")
         while self.running:
             self.parent_app_.processEvents()
             await asyncio.sleep(0.1)
@@ -94,34 +97,38 @@ def on_sd_inserted(drive):
     # Analyze the SD card and notify the user
     analyze_sd_card(drive)
     notify_user(f"SD card analyzed: {drive}")
-    log_event("INFO", f"SD card analyzed: {drive}")
+    info(f"SD card analyzed: {drive}")
+
 
 def analyze_sd_card(drive_path):
-    # Define the required structure of folders and files on the SD card
-    required_structure = ["folder1", "folder2", "file1.txt"]
-    found_items = []
-
-    # Walk through the drive path and check for required folders and files
-    for root, dirs, files in os.walk(drive_path):
-        for name in dirs + files:
-            if name in required_structure:
-                found_items.append(name)
-
-    # Check if the required structure is present
-    if set(required_structure).issubset(set(found_items)):
-        print("Required structure found.")
-        # Trigger notification and logging here
-    else:
-        print("Required structure not found.")
+    # # Define the required structure of folders and files on the SD card
+    # required_structure = ["folder1", "folder2", "file1.txt"]
+    # found_items = []
+    #
+    # # Walk through the drive path and check for required folders and files
+    # for root, dirs, files in os.walk(drive_path):
+    #     for name in dirs + files:
+    #         if name in required_structure:
+    #             found_items.append(name)
+    #
+    # # Check if the required structure is present
+    # if set(required_structure).issubset(set(found_items)):
+    #     print("Required structure found.")
+    #     # Trigger notification and logging here
+    # else:
+    #     print("Required structure not found.")
+    pass
 
 def notify_user(message):
-    # Placeholder for actual notification code
-    print(f"Notification: {message}")
+    # # Placeholder for actual notification code
+    # print(f"Notification: {message}")
+    pass
 
 def log_event(event_type, message):
     # Append the event log with a timestamp and message
     with open("event_log.txt", "a") as log_file:
         log_file.write(f"{datetime.datetime.now()} - {event_type}: {message}\n")
+
 
 if __name__ == "__main__":
     tray_app = TrayApp()
