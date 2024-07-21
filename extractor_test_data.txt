@@ -16,21 +16,21 @@
 IMG20230718_143045.jpg
 VID231218_1430.mp4
 Photo2023-07-18 14:30:45.png
-Screenshot2023/07/18T14:30:45.jpg
+Screenshot2023/07/18T14:30:45.jpg_wrong
 Capture20230718T143045.avi
-Recording2023/07/18 14:30.mkv
+Recording2023/07/18 14:30.mkv_wrong
 Video2023_07_18 14_30.mov
 IMG202307_18_143045.jpg_wrong
 VID2312_1814_30.mp4_wrong
 Photo_2023-0718 143045.png_wrong
-Screenshot2023-07-18T143045.jpg_wrong
+Screenshot2023-07-18T143045.jpg
 Capture2023/0718_143045.avi_wrong
 Recording2023_07-18 14:30.mkv_wrong
 Video18_07_2023 14_30_45.mov_wrong
 Picture20220101_123456.jpg
 Photo20230506T152345.png
 Video2022_08_15 09_10_11.avi
-Screenshot2012/03/14 11:12.png
+Screenshot2012/03/14 11:12.png_wrong
 Image2011-12-13 14:15:16.jpg
 IMG20210405T111213.mov
 Recording20200908_221100.mp4
