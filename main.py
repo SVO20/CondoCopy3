@@ -3,9 +3,7 @@ CondoCopy3 v0.0
 
 """
 import asyncio
-import os
 import sys
-import zlib
 from collections import deque
 
 from PyQt5.QtCore import Qt
@@ -107,6 +105,8 @@ class TrayApp:
 
         # placeholder for display logic
         # todo display logic
+        #
+        # kinda    -->     f"{drive['device']} (Removable) ID: {drive['id']}"
         dialog = SDCardDialog('A:')
         dialog.setWindowModality(Qt.NonModal)
         dialog.show()

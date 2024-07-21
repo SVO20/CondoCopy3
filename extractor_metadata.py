@@ -1,5 +1,5 @@
 """
-Module provides fanalyzing media files (images and videos) by extracting key metadata
+Module provides analyzing media files (images and videos) by extracting key metadata
 and generating new filenames based on the metadata.
 
 includes the functions to determine file type, extract key date/time from metadata,
