@@ -15,6 +15,7 @@ from logger import debug, error, info, omit, success, trace, warning
 from initialization import d_cameras
 from detectors import get_removable_drives, generate_id, match_camera_model
 
+from qasync import QEventLoop, asyncSlot
 
 # deque_removables format --v
 # deque([{'device': str(drive), 'id': str(drive_id)}, ... ])
@@ -22,39 +23,36 @@ deque_removables = deque()
 
 
 class TrayApp:
-    def __init__(self):
-        # Initialize the QApplication
-        self.parent_app_ = QApplication(sys.argv)
+    def __init__(self, parent_app):
+        self._parent_app = parent_app
 
         # === TRAY ===
-        # Create a system tray icon as child
-        self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), self.parent_app_)
-        # Create a context menu
+        # Create a system tray icon
+        self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), self._parent_app)
+
+        # Create QActions
+        action_about = QAction(QIcon('about.png'), "About", self.tray_icon)
+        action_about.triggered.connect(self.on_action_about)
+
+        action_quit = QAction(QIcon('exit.png'), "Quit", self.tray_icon)
+        action_quit.triggered.connect(self.on_action_quit)
+
+        # Create a tray menu
         self.menu = QMenu()
-        self.action_quit = QAction("Quit")
-        self.action_quit.triggered.connect(self.exit)
-        self.menu.addAction(self.action_quit)
-        # Set the context menu for the tray icon
-        self.tray_icon.setContextMenu(self.menu)
+        self.menu.addAction(action_about)
+        self.menu.addAction(action_quit)
+
         # Left click for tray menu handling
         self.tray_icon.activated.connect(self.on_tray_icon_activated)
+
+        # Set the context menu for the tray icon
+        self.tray_icon.setContextMenu(self.menu)
+
         # Show the tray icon
         self.tray_icon.show()
 
-        ## === ASYNC LOOP ===
-        # Initialize the asyncio event loop
-        self._loop = asyncio.get_event_loop()
-        # Create a flag to ensure the Qt app is alive
-        self.running = True
-
         ## === VARS ===
         self.last_drive_list = []
-
-    def run(self):
-        # Schedule the monitoring task
-        self._loop.create_task(self.monitor_removables_atask())
-        # Run the Qt application and asyncio event loop together
-        self._loop.run_until_complete(self.qt_life_cycle_atask())
 
     async def monitor_removables_atask(self):
         while True:
@@ -96,8 +94,8 @@ class TrayApp:
     async def qt_life_cycle_atask(self):
         # Run the Qt application intertnal events until the application quits
         debug(f"Qt application to run")
-        while self.running:
-            self.parent_app_.processEvents()
+        while True:
+            self._parent_app.processEvents()
             await asyncio.sleep(0.1)
 
     async def refresh_display_atask(self):
@@ -111,15 +109,15 @@ class TrayApp:
         dialog.setWindowModality(Qt.NonModal)
         dialog.show()
 
-
-    def exit(self):
+    def on_action_quit(self):
         # Hide the tray icon and quit the application
         self.tray_icon.hide()
-        self.parent_app_.quit()
-        # Stop the app
-        self.running = False
+        self._parent_app.quit()
 
-    ### ----------------------------------------------------------------------
+    def on_action_about(self):
+        # Show about window
+        # todo show About window
+        pass
 
     def on_tray_icon_activated(self, reason):
         # Left click handling
@@ -146,6 +144,23 @@ class SDCardDialog(QDialog):
         self.setLayout(layout)
 
 
+async def main():
+    # QApplication, QEventLoop
+    app = QApplication(sys.argv)
+    loop = QEventLoop(app)
+    #
+    asyncio.set_event_loop(loop)
+
+    tray_app = TrayApp(app)
+    # Schedule the monitoring task
+    await asyncio.create_task(tray_app.monitor_removables_atask())
+    # Run the Qt application and asyncio event loop together
+    await asyncio.create_task(tray_app.qt_life_cycle_atask())
+
+    with loop:
+        await loop.run_forever()
+
 if __name__ == "__main__":
-    tray_app = TrayApp()
-    tray_app.run()
+    asyncio.run(main())
+
+
