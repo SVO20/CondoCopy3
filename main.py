@@ -7,7 +7,7 @@ from qasync import QEventLoop, asyncSlot
 
 from initialization import d_cameras
 from logger import debug
-from models import RemovableDevicesPoolModel
+from models import RemovablesModel
 from views import SDCardDialog
 
 
@@ -36,7 +36,7 @@ class TrayAppController:
 
     async def start_monitoring(self):
         # Start monitoring removable devices
-        await self.model.monitor_removables()
+        await self.model.do_monitor_removables()
 
     async def qt_life_cycle(self):
         # Run the Qt application internal events until the application quits
@@ -68,11 +68,12 @@ class TrayAppController:
 
 
 async def main():
+    # QApplication, QEventLoop
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
-    model = RemovableDevicesPoolModel(d_cameras)
+    model = RemovablesModel(d_cameras)
     controller_trayapp = TrayAppController(app, model)
 
     # Schedule the monitoring task
