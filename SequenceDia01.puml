@@ -1,0 +1,69 @@
+@startuml
+actor User
+
+participant "User" as U
+participant "QApplication" as QA
+participant "TrayApp" as TA
+participant "SystemTrayIcon" as STI
+participant "QMenu" as QM
+participant "QAction" as QACTION
+participant "get_removable_drives" as GRD
+participant "generate_id" as GI
+participant "match_camera_model" as MCM
+participant "SDCardDialog" as SDD
+
+User -> QA: run app
+activate QA
+
+QA -> TA: __init__()
+activate TA
+
+TA -> STI: create and show icon
+activate STI
+
+TA -> QM: create context menu
+activate QM
+
+QM -> QACTION: add About and Quit actions
+activate QACTION
+deactivate QACTION
+deactivate QM
+
+STI -> TA: connect activated signal
+deactivate STI
+deactivate TA
+
+loop monitor_removables_atask
+    TA -> GRD: get_removable_drives()
+    activate GRD
+    GRD --> TA: list of drives
+    deactivate GRD
+
+    alt new removable detected
+        TA -> GI: generate_id(drive)
+        activate GI
+        GI --> TA: drive_id
+        deactivate GI
+
+        TA -> MCM: match_camera_model(drive, d_cameras)
+        activate MCM
+        MCM --> TA: camera_model
+        deactivate MCM
+
+        TA -> deque_removables: add drive with id and model
+    end
+
+    alt removable disconnected
+        TA -> deque_removables: remove drive
+    end
+
+    alt changes detected
+        TA -> TA: refresh_display_atask()
+        activate SDD
+        TA -> SDD: show dialog with drive info
+        deactivate SDD
+    end
+
+    TA -> TA: sleep(1s)
+end
+@enduml
