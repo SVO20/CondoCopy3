@@ -52,15 +52,12 @@ class TrayAppController:
     def on_model_refresh(self):
         # Refresh the display with currently connected devices
         devices = self.model.current_removables()
-        for device in devices:
-            debug(f"{device = }")
-            # dialog = SDCardDialog(device['device'])
-            # dialog.setWindowModality(Qt.NonModal)
-            # dialog.show()
 
-        trace(f"microservice <-- to run")
-        asyncio.create_task(self.microservice())
-        trace(f"microservice scheduled OK")
+        SDCardDialog.singleton_instance(devices)
+
+        # trace(f"microservice <-- to run")
+        # asyncio.create_task(self.microservice())
+        # trace(f"microservice scheduled OK")
 
     def on_action_quit(self):
         self.model.stop()
