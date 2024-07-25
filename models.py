@@ -2,7 +2,7 @@ import os
 import ctypes
 import zlib
 from datetime import datetime
-from collections import Counter
+from collections import Counter, deque
 from typing import Optional, Tuple
 
 import asyncio
@@ -10,26 +10,28 @@ import numpy as np
 import psutil
 from PyQt5.QtCore import pyqtSignal, QObject
 
-from logger import success, trace
+from logger import success, trace, debug
 
 
 class RemovablesModel(QObject):
     """A model for managing removable devices and matching them with known camera models"""
 
-    qts_removables_changed = pyqtSignal(list)  # Signal that emitted when device changed
+    qts_removables_changed = pyqtSignal()  # Signal that emitted when device changed
 
     def __init__(self, known_cameras):
         super().__init__()
-        self.devices = []
+
+        self.deque_devices = deque()  # Using deque for ensure atomic data retrieval
         self.known_cameras = known_cameras
+        self.event_stop = asyncio.Event()
 
     async def do_monitor_removables(self):
         # Continuously monitor removable devices and emit signal on changes.
 
-        while True:
+        while not self.event_stop.is_set():
             # Call _get_removable_drives
             s_current_removables = set(await _get_removable_drives())
-            s_last_removables = {device['drive'] for device in self.devices}
+            s_last_removables = {device['drive'] for device in self.deque_devices}
             is_updated = False
 
             # Check for new connected removables
@@ -38,28 +40,33 @@ class RemovablesModel(QObject):
                 drive_id = _generate_id(drive)
                 # Call _match_camera_model
                 camera_model = _match_camera_model(drive, self.known_cameras)
-                self.devices.append({'drive': drive,
-                                     'id': drive_id,
-                                     'model': camera_model})
+
+                self.deque_devices.append({'drive': drive,  # <- 'device' data
+                                     'id': drive_id,  # <- storing
+                                     'model': camera_model})                    # <- format
+
                 success(f"The removable is matched with: {camera_model}")
                 is_updated = True
 
             # Check for disconnected drives
-            for drive in list(self.devices):
+            for drive in list(self.deque_devices):
                 if drive['drive'] not in s_current_removables:
-                    self.devices.remove(drive)
+                    self.deque_devices.remove(drive)
                     success(f"The removable [{drive['id']}] was disconnected")
                     is_updated = True
 
-            trace(f"{self.devices = }")
+            debug(f"{self.deque_devices = }")
             if is_updated:
-                self.qts_removables_changed.emit(self.current_removables)  # Emit signal
+                self.qts_removables_changed.emit()  # Emit signal
+                debug(f"emitted")
 
             await asyncio.sleep(1.1)
 
-    @property
-    def current_removables(self):
-        return list(self.devices)
+    def current_removables(self) -> list:
+        return list(self.deque_devices)
+
+    def stop(self):
+        self.event_stop.set()
 
 
 # ===============================================================================================

@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QAction, QDial
 from qasync import QEventLoop, asyncSlot
 
 from initialization import d_cameras
-from logger import debug
+from logger import debug, trace
 from models import RemovablesModel
 from views import SDCardDialog
 
@@ -16,6 +16,10 @@ class TrayAppController:
         self.model = model
         self._parent_app = parent_app
 
+        # Connect the model signal to the refresh_display slot
+        self.model.qts_removables_changed.connect(self.on_model_refresh)
+
+        # Create TrayIcon
         self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), self._parent_app)
 
         # Create actions for the tray icon menu
@@ -45,16 +49,21 @@ class TrayAppController:
             self._parent_app.processEvents()
             await asyncio.sleep(0.1)
 
-    @asyncSlot()
-    async def refresh_display(self):
+    def on_model_refresh(self):
         # Refresh the display with currently connected devices
-        devices = self.model.get_devices()
+        devices = self.model.current_removables()
         for device in devices:
-            dialog = SDCardDialog(device['device'])
-            dialog.setWindowModality(Qt.NonModal)
-            dialog.show()
+            debug(f"{device = }")
+            # dialog = SDCardDialog(device['device'])
+            # dialog.setWindowModality(Qt.NonModal)
+            # dialog.show()
+
+        trace(f"microservice <-- to run")
+        asyncio.create_task(self.microservice())
+        trace(f"microservice scheduled OK")
 
     def on_action_quit(self):
+        self.model.stop()
         self.tray_icon.hide()
         self._parent_app.quit()
 
@@ -66,12 +75,20 @@ class TrayAppController:
         if reason == QSystemTrayIcon.Trigger:
             self.menu.popup(QCursor.pos())
 
+    async def microservice(self):
+        # test
+        trace(f"test microservice ON")
+        await asyncio.sleep(10)
+        trace(f"test microservice OFF")
+
 
 async def main():
     # QApplication, QEventLoop
     app = QApplication(sys.argv)
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
+
+    # Qevent
 
     model = RemovablesModel(d_cameras)
     controller_trayapp = TrayAppController(app, model)
