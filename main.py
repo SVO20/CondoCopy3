@@ -8,8 +8,8 @@ from qasync import QEventLoop  # , asyncSlot
 from initialization import d_cameras
 from logger import debug, trace
 from models import RemovablesModel
-from views import SDCardDialog
 
+from takeb1 import RemovablesView
 
 class MainInvisibleParent(QWidget):
     def __init__(self, model, view):
@@ -65,7 +65,8 @@ class MainInvisibleParent(QWidget):
         # Refresh the display with currently connected devices
         devices = self.model.current_removables()
 
-        SDCardDialog.singleton_instance(devices, self)
+        # todo --v--   malfunction here
+        asyncio.create_task(self.view.update_content(devices))
 
         # trace(f"microservice <-- to run")
         # asyncio.create_task(self.microservice())
@@ -103,7 +104,7 @@ async def main():
     # Qevent
 
     model = RemovablesModel(d_cameras)
-    view = SDCardDialog.singleton_instance()
+    view = RemovablesView.singleton_instance()
     controller_parent_vindow = MainInvisibleParent(model, view)
 
     # Schedule the monitoring task

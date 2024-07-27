@@ -4,6 +4,7 @@ import sys
 import asyncio
 from qasync import QEventLoop, asyncSlot
 
+
 class RemovablesView(QWidget):
     """Info window"""
 
@@ -38,7 +39,6 @@ class RemovablesView(QWidget):
 
         self.lower_down()
 
-    @asyncSlot(list)
     async def update_content(self, devices):
         if not devices:
             self.lower_down()
@@ -75,10 +75,10 @@ class RemovablesView(QWidget):
         self.activateWindow()
 
 
-# To run the application
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    devices = [{'drive': 'E:'}]
+    devices = [{'drive': 'E:'}, {'drive': 'F:'}, ]
     window = RemovablesView.singleton_instance()
     asyncio.run(window.update_content(devices))
     sys.exit(app.exec_())
