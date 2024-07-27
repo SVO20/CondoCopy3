@@ -1,50 +1,56 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QApplication
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton, QMessageBox, QApplication, \
+    QWidget
 import sys
 
 from logger import trace
 
 
-class SDCardDialog(QDialog):
+class SDCardDialog(QWidget):
     """Info window"""
 
     _initialized = False
     _instance = None        # <-- SINGLETON instance to be placed here
 
     @classmethod
-    def singleton_instance(cls, devices, parent=None):
+    def singleton_instance(cls, devices=None, parent=None):
         if cls._instance is None:
             cls._instance = SDCardDialog(devices, parent)
         else:
-            cls._instance.update_ui(devices)
+            cls._instance.update_ui()
             cls._instance.show()
             cls._instance.raise_()
             cls._instance.activateWindow()
+
         return cls._instance
 
-    def __new__(cls, devices, parent=None):
+    def __new__(cls, devices=None, parent=None):
         return super(SDCardDialog, cls).__new__(cls)
 
-    def __init__(self, devices, parent=None):
-        if self._initialized:
-            # Window already exists
-            trace(f"Dialog window to bring up")
+    def __init__(self, devices=None, parent=None):
+        if not self._initialized:
+            self._initialized = True
+            # Window not exists
+            trace(f"Dialog window to create")
+            super().__init__(parent)
+            self.setWindowTitle("Removable inserted")
             self.devices = devices
-            self.update_ui()
-            self.show()
-            self.raise_()
-            self.activateWindow()
+
+            if self.devices:
+                trace(f"Shows up immediately")
+                self.init_ui()
+                self.show()
+                self.raise_()
+                self.activateWindow()
             return
 
-        # Window not exists
-        trace(f"Dialog window to create")
-        super().__init__(parent)
-        self.setWindowTitle("Removable inserted")
+        # Window already exists
+        trace(f"Dialog window to bring up")
         self.devices = devices
-        self._initialized = True
-        self.init_ui()
+        self.update_ui()
         self.show()
         self.raise_()
         self.activateWindow()
+
 
     def init_ui(self):
         # <=== Window not exists
@@ -72,7 +78,7 @@ class SDCardDialog(QDialog):
 
         # Display each device in a QLabel and add it to the layout
         for device in self.devices:
-            label = QLabel(f"SD card inserted: {device}")
+            label = QLabel(f"SD card inserted: {device['drive']}")
             self.layout.addWidget(label)
             self.device_qlabels.append(label)
 
@@ -80,7 +86,6 @@ class SDCardDialog(QDialog):
         self.layout.addWidget(self.message)
 
         button_ok = QPushButton("OK")
-        button_ok.clicked.connect(self.accept)
         self.layout.addWidget(button_ok)
 
         self.setLayout(self.layout)

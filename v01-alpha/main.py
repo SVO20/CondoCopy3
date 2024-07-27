@@ -42,11 +42,7 @@ class TrayApp:
         self.menu.addAction(action_about)
         self.menu.addAction(action_quit)
 
-        # Left click for tray menu handling
-        self.tray_icon.activated.connect(self.on_tray_icon_activated)
 
-        # Set the context menu for the tray icon
-        self.tray_icon.setContextMenu(self.menu)
 
         # Show the tray icon
         self.tray_icon.show()
