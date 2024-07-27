@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QApplication, QWidget
 from PyQt5.QtCore import Qt
 import sys
+import asyncio
+from qasync import QEventLoop, asyncSlot
 
 class RemovablesView(QWidget):
     """Info window"""
 
-    _initialized = False
     _instance = None  # SINGLETON instance
 
     @classmethod
@@ -15,39 +16,48 @@ class RemovablesView(QWidget):
         return cls._instance
 
     def __new__(cls, parent=None):
-        return super(RemovablesView, cls).__new__(cls)
+        if cls._instance is None:
+            cls._instance = super(RemovablesView, cls).__new__(cls)
+        return cls._instance
 
     def __init__(self, parent=None):
-        if not self._initialized:
-            self._initialized = True
-            super().__init__(parent)
-            self.setWindowTitle("Removable inserted")
-            self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
-            self.device_qlabels = []
-            self.layout = QVBoxLayout()
-            self.message = QLabel()
-            self.layout.addWidget(self.message)
-            self.button_close = QPushButton("Close")
-            self.button_close.clicked.connect(self.close)
-            self.layout.addWidget(self.button_close)
-            self.setLayout(self.layout)
+        # to be run once
+        super().__init__(parent)
+        self.setWindowTitle("Removable inserted")
+        self.setWindowFlags(Qt.Tool | Qt.FramelessWindowHint)
+        self.device_qlabels = []
+        self.layout = QVBoxLayout()
+        self.message = QLabel()
+        self.layout.addWidget(self.message)
+        self.button_close = QPushButton("Close")
+        self.button_close.clicked.connect(self.close)
+        self.layout.addWidget(self.button_close)
+        self.setLayout(self.layout)
 
+        self.devices = []
+
+        self.lower_down()
+
+    @asyncSlot(list)
+    async def update_content(self, devices):
+        if not devices:
             self.lower_down()
-
-    def update_content(self, devices):
+            return
         self.devices = devices
-        self.update_ui()
+        self._update_ui()
 
-    def update_ui(self):
+    def _update_ui(self):
         # Clear current labels
         for label in self.device_qlabels:
             self.layout.removeWidget(label)
             label.deleteLater()
         self.device_qlabels.clear()
+
         for device in self.devices:
             label = QLabel(f"SD card inserted: {device['drive']}")
             self.layout.addWidget(label)
             self.device_qlabels.append(label)
+
         if not self.devices:
             self.lower_down()
             self.close()
@@ -64,10 +74,11 @@ class RemovablesView(QWidget):
         self.raise_()
         self.activateWindow()
 
+
 # To run the application
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     devices = [{'drive': 'E:'}]
     window = RemovablesView.singleton_instance()
-    window.update_content(devices)
+    asyncio.run(window.update_content(devices))
     sys.exit(app.exec_())
