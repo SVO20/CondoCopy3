@@ -30,9 +30,9 @@ async def solely_execute(coro):
 
 @pytest.mark.asyncio
 async def test_singleton_instance(app):
-    await solely_execute(async_test_singleton_instance(app))
+    await solely_execute(async_test_singleton_instance())
 
-async def async_test_singleton_instance(app):
+async def async_test_singleton_instance():
     window = RemovablesView.singleton_instance()
     assert window is not None
     assert isinstance(window, RemovablesView)
@@ -40,9 +40,9 @@ async def async_test_singleton_instance(app):
 
 @pytest.mark.asyncio
 async def test_update_content_empty(app):
-    await solely_execute(async_test_update_content_empty(app))
+    await solely_execute(async_test_update_content_empty())
 
-async def async_test_update_content_empty(app):
+async def async_test_update_content_empty():
     window = RemovablesView.singleton_instance()
     await window.update_content([])
     assert not window.isVisible()
@@ -50,9 +50,9 @@ async def async_test_update_content_empty(app):
 
 @pytest.mark.asyncio
 async def test_update_content_with_device(app):
-    await solely_execute(async_test_update_content_with_device(app))
+    await solely_execute(async_test_update_content_with_device())
 
-async def async_test_update_content_with_device(app):
+async def async_test_update_content_with_device():
     window = RemovablesView.singleton_instance()
     devices = [{'drive': 'E:'}]
     await window.update_content(devices)
@@ -63,9 +63,9 @@ async def async_test_update_content_with_device(app):
 
 @pytest.mark.asyncio
 async def test_close_button(app):
-    await solely_execute(async_test_close_button(app))
+    await solely_execute(async_test_close_button())
 
-async def async_test_close_button(app):
+async def async_test_close_button():
     window = RemovablesView.singleton_instance()
     window.show()
     assert window.isVisible()
