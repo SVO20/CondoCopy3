@@ -13,7 +13,7 @@ import numpy as np
 import psutil
 import toml
 
-from initialization import d_cameras
+from settings import d_cameras
 
 
 async def get_removable_drives() -> list:

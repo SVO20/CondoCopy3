@@ -118,3 +118,8 @@ def load_settings(toml_filename) -> Settings:
         error(f"Failed to load settings from {toml_filename}: {e}")
         raise
 
+
+# ===================================
+
+d_cameras = load_cameras("cameras.toml")
+

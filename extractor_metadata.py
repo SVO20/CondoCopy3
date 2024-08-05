@@ -11,7 +11,7 @@ from pymediainfo import MediaInfo
 from datetime import datetime
 import piexif
 
-from compact_datetime import dtstring_to_compactformat
+from my_utils import dtstring_to_compactformat
 
 
 def get_file_type(file_path) -> str:
