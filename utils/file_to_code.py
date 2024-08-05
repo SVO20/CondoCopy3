@@ -29,8 +29,8 @@ def bytes_to_pep8_constant(bytes, const_name, line_length):
 
 
 # Place here the path to file to encode to Python-code
-filename = Path("../cameras.toml")
-constant_name = 'default_cameras'
+filename = Path("../settings.toml")
+constant_name = 'default_settings'
 
 
 if __name__ == "__main__":

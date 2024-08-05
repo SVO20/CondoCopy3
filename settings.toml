@@ -1,0 +1,10 @@
+start_in_tray = false
+default_action = "move"
+rename = false
+rename_heuristic = false
+additional_extensions = [ "id", "xpg",]
+paired_extensions = [ [ ".CR2", ".xml",], [ ".ARW", ".xml",],]
+clear_DCIM_aftermove = false
+clear_others_aftermove = false
+full_automated_mode = false
+full_automated_MOVE = false
