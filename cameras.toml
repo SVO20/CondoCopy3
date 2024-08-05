@@ -13,40 +13,18 @@
 [cameras.Sony_A73]
 structure = ["DCIM", "PRIVATE/M4ROOT/CLIP", "PRIVATE/M4ROOT/GENERAL", "PRIVATE/SONY"]
 
-[cameras.Canon_EOS_5D_Mark_IV]
-structure = ["DCIM", "MISC", "PRIVATE", "CANONMSC"]
-
-[cameras.Canon_EOS_70D]
-structure = ["DCIM", "MISC", "CANONMSC"]
+[cameras.Canon_EOS]
+structure = ["DCIM", "CANONMSC"]
 
 [cameras.Canon_PowerShot_G7X]
 structure = ["DCIM", "MISC", "CANONMSC", "PRIVATE"]
 
-[cameras.Nikon_D850]
-structure = ["DCIM", "MISC", "NIKON"]
-
-[cameras.Nikon_Z6]
-structure = ["DCIM", "MISC", "NIKON", "PRIVATE"]
-
-[cameras.Nikon_D5600]
-structure = ["DCIM", "MISC", "NIKON"]
-
 [cameras.Sony_Alpha_6000]
 structure = ["DCIM", "MISC", "PRIVATE/SONY"]
-
-[cameras.Fujifilm_XT3]
-structure = ["DCIM", "MISC", "Fujifilm"]
-
-[cameras.Panasonic_Lumix_GH5]
-structure = ["DCIM", "MISC", "PRIVATE/AVCHD", "PRIVATE/AVCHD/BDMV", "PRIVATE/AVCHD/BDMV/CLIPINF", "PRIVATE/AVCHD/BDMV/PLAYLIST", "PRIVATE/AVCHD/BDMV/STREAM"]
 
 [cameras.Android_Device]
 structure = ["DCIM/Camera", "Pictures/Screenshots", "Download"]
 
-[cameras.Nikon_or_Canon]
-structure = ["DCIM", "MISC"]
-
-[cameras.Some_SD_with_DCIM]
+[cameras.Vary_DCIF_compat]
 structure = ["DCIM"]
-
 
