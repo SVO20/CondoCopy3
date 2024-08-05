@@ -6,7 +6,7 @@ import toml
 from logger import debug, error, info, omit, success, trace, warning
 from my_utils import expand_compressed
 
-
+# ============== resources =============
 DEFAULT_SETTINGS = (
     b'eJx1jj0LwjAURff+ipC5dHB3kOrgUAQHHaSER/NiA/koyYvUf29qIYjo9u4958GNBIGEdoICPNmWKTAR'
     b'K4kKkiEBA2nvcs2tfyCvAjqwWLQ1ihFT0JH0UABIqZdPMAJnQhfzHTO9Ma4lrxmfpzuv+2oCHVB+O9lq'
@@ -21,6 +21,7 @@ DEFAULT_CAMERAS = (
     b'jzsi382K2TKeH5+wsrgPjzslXGlVzUp2rlUSF2WR+/c6qVroJyTWalvdXf0+V79/62OfN5rwNHK3bXn1'
     b'YzqdfmR3NlCsatKyrlLcSYFjNtHhO+xd5OGLR0wQojIui/F6qp9Up3n9znnN6blyBreV0L37rqOIruAf'
     b'sT0aYg==')
+# =======================================
 
 
 class Settings:
@@ -92,3 +93,5 @@ def load_settings(toml_filename) -> Settings:
 
     success(f"'{toml_filename}' loaded successfully.")
     return Settings("settings.toml")
+
+
