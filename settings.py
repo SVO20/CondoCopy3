@@ -1,5 +1,10 @@
+import os
 from types import SimpleNamespace
+
 import toml
+
+from my_utils import expand_compressed
+
 
 DEFAULT_SETTINGS = (
     b'eJx1jj0LwjAURff+ipC5dHB3kOrgUAQHHaSER/NiA/koyYvUf29qIYjo9u4958GNBIGEdoICPNmWKTAR'
@@ -18,53 +23,29 @@ DEFAULT_CAMERAS = (
 
 
 class Settings:
-    def __init__(self, file_path):
-        self.file_path = file_path
-        self.load_settings()
+    def __init__(self, file_path, default_bytes_const=DEFAULT_SETTINGS):
+        self._file_path = file_path
+        if not os.path.exists(self._file_path):
+            with open(self._file_path, 'w') as file:
+                default_settings_str = expand_compressed(default_bytes_const)
+                file.write(default_settings_str)
+        with open(self._file_path, 'r') as file:
+            self._settings = toml.load(file)
 
-    def load_settings(self):
-        with open(self.file_path, 'r') as file:
-            self.settings = toml.load(file)
-        self._settings_namespace = SimpleNamespace(**self.settings)
+        self._settings_namespace = SimpleNamespace(**self._settings)
 
     def get(self, key, default=None):
         return getattr(self._settings_namespace, key, default)
 
     def set(self, key, value):
         setattr(self._settings_namespace, key, value)
-        self.settings[key] = value
-        self.save_settings()
+        self._settings[key] = value
+        self.rewrite_settings()
 
-    def save_settings(self):
-        with open(self.file_path, 'w') as file:
-            toml.dump(self.settings, file)
+    def rewrite_settings(self):
+        with open(self._file_path, 'w') as file:
+            toml.dump(self._settings, file)
 
     @property
     def take(self):
         return self._settings_namespace
-
-
-# TEST
-if __name__ == "__main__":
-    settings = Settings("settings.toml")
-
-    # Accessing properties
-    print("default_action:", settings.take.default_action)
-    print("start_in_tray:", settings.take.start_in_tray)
-    print("additional_extensions:", settings.take.additional_extensions)
-
-    # Modifying a setting
-    settings.set("default_action", "move")
-
-    # Accessing modified property
-    print("Modified default_action:", settings.take.default_action)
-
-    # Accessing all properties again
-    all_settings = settings.take
-    print("All settings:", all_settings)
-
-    # Examples of accessing individual properties
-    print("rename:", all_settings.rename)
-    print("rename_heuristic:", all_settings.rename_heuristic)
-    print("clear_DCIM_aftermove:", all_settings.clear_DCIM_aftermove)
-    print("paired_extensions:", all_settings.paired_extensions)
