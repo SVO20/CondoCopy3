@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import toml
 
+from logger import debug, error, info, omit, success, trace, warning
 from my_utils import expand_compressed
 
 
@@ -23,8 +24,8 @@ DEFAULT_CAMERAS = (
 
 
 class Settings:
-    def __init__(self, file_path, default_bytes_const=DEFAULT_SETTINGS):
-        self._file_path = file_path
+    def __init__(self, file_path_to_load, default_bytes_const=DEFAULT_SETTINGS):
+        self._file_path = file_path_to_load
         if not os.path.exists(self._file_path):
             with open(self._file_path, 'w') as file:
                 default_settings_str = expand_compressed(default_bytes_const)
@@ -49,3 +50,45 @@ class Settings:
     @property
     def take(self):
         return self._settings_namespace
+
+
+def load_cameras(toml_filename) -> dict:
+    """Load and validate cameras' "footprints" from a .toml file"""
+
+    def ensure_pathlist(inlist: list) -> list:
+        try:
+            return [os.path.relpath(item) for item in inlist]
+        except TypeError as e:
+            error(f"TypeError in ensure_pathlist: {e}. Ensure all items are strings.")
+            raise
+        except ValueError as e:
+            error(f"ValueError in ensure_pathlist: {e}. Invalid path provided.")
+            raise
+
+    if not os.path.exists(toml_filename):
+        with open(toml_filename, 'w') as file:
+            default_settings_str = expand_compressed(DEFAULT_CAMERAS)
+            file.write(default_settings_str)
+
+    try:
+        with open(toml_filename, 'r') as file:
+            d_cams = toml.load(file)['cameras']
+            info(f"Successfully loaded cameras from {toml_filename}")
+            return {cam_name: {'structure': ensure_pathlist(d_cams.get(cam_name)['structure'])} for
+                    cam_name in d_cams}
+    except KeyError as e:
+        error(f"Key error: {e}")
+        raise
+    except (TypeError, ValueError) as e:
+        error(f"Bad pathname in .toml encountered: {e}")
+        raise
+    except toml.TomlDecodeError as e:
+        error(f"Error decoding TOML file: {e}")
+        raise
+
+
+def load_settings(toml_filename) -> Settings:
+    """Load app settings from a .toml file"""
+
+    success(f"'{toml_filename}' loaded successfully.")
+    return Settings("settings.toml")
