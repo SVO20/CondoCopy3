@@ -13,7 +13,7 @@ from PyQt5.QtWidgets import (QAction, QApplication, QDialog, QLabel, QMenu,
 
 from logger import debug, error, info, omit, success, trace, warning
 from initialization import d_cameras
-from detectors import get_removable_drives, generate_id, match_camera_model
+from match_camera import get_removable_drives, generate_id, match_camera_model
 
 
 # deque_removables format --v
