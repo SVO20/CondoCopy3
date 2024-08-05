@@ -27,26 +27,40 @@ DEFAULT_CAMERAS = (
 class Settings:
     def __init__(self, file_path_to_load, default_bytes_const=DEFAULT_SETTINGS):
         self._file_path = file_path_to_load
-        if not os.path.exists(self._file_path):
-            with open(self._file_path, 'w') as file:
-                default_settings_str = expand_compressed(default_bytes_const)
-                file.write(default_settings_str)
-        with open(self._file_path, 'r') as file:
-            self._settings = toml.load(file)
+        try:
+            if not os.path.exists(self._file_path):
+                with open(self._file_path, 'w') as file:
+                    default_settings_str = expand_compressed(default_bytes_const)
+                    file.write(default_settings_str)
+                    success(f"Default settings written to {self._file_path}")
+            with open(self._file_path, 'r') as file:
+                self._settings = toml.load(file)
+                info(f"Settings loaded from {self._file_path}")
+        except (OSError, toml.TomlDecodeError) as e:
+            error(f"Error loading settings: {e}")
+            raise
 
         self._settings_namespace = SimpleNamespace(**self._settings)
 
     def get(self, key, default=None):
-        return getattr(self._settings_namespace, key, default)
+        value = getattr(self._settings_namespace, key, default)
+        debug(f"Retrieved setting: {key}={value}")
+        return value
 
     def set(self, key, value):
         setattr(self._settings_namespace, key, value)
         self._settings[key] = value
+        info(f"Set setting: {key}={value}")
         self.rewrite_settings()
 
     def rewrite_settings(self):
-        with open(self._file_path, 'w') as file:
-            toml.dump(self._settings, file)
+        try:
+            with open(self._file_path, 'w') as file:
+                toml.dump(self._settings, file)
+                success(f"Settings rewritten to {self._file_path}")
+        except OSError as e:
+            error(f"Error rewriting settings: {e}")
+            raise
 
     @property
     def take(self):
@@ -67,9 +81,14 @@ def load_cameras(toml_filename) -> dict:
             raise
 
     if not os.path.exists(toml_filename):
-        with open(toml_filename, 'w') as file:
-            default_settings_str = expand_compressed(DEFAULT_CAMERAS)
-            file.write(default_settings_str)
+        try:
+            with open(toml_filename, 'w') as file:
+                default_settings_str = expand_compressed(DEFAULT_CAMERAS)
+                file.write(default_settings_str)
+                success(f"Default cameras written to {toml_filename}")
+        except OSError as e:
+            error(f"Error writing default cameras to {toml_filename}: {e}")
+            raise
 
     try:
         with open(toml_filename, 'r') as file:
@@ -91,7 +110,11 @@ def load_cameras(toml_filename) -> dict:
 def load_settings(toml_filename) -> Settings:
     """Load app settings from a .toml file"""
 
-    success(f"'{toml_filename}' loaded successfully.")
-    return Settings("settings.toml")
-
+    try:
+        settings = Settings(toml_filename)
+        success(f"'{toml_filename}' loaded successfully.")
+        return settings
+    except Exception as e:
+        error(f"Failed to load settings from {toml_filename}: {e}")
+        raise
 
