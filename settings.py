@@ -40,7 +40,7 @@ class Settings:
             toml.dump(self.settings, file)
 
     @property
-    def all_settings(self):
+    def take(self):
         return self._settings_namespace
 
 
@@ -49,18 +49,18 @@ if __name__ == "__main__":
     settings = Settings("settings.toml")
 
     # Accessing properties
-    print("default_action:", settings.all_settings.default_action)
-    print("start_in_tray:", settings.all_settings.start_in_tray)
-    print("additional_extensions:", settings.all_settings.additional_extensions)
+    print("default_action:", settings.take.default_action)
+    print("start_in_tray:", settings.take.start_in_tray)
+    print("additional_extensions:", settings.take.additional_extensions)
 
     # Modifying a setting
     settings.set("default_action", "move")
 
     # Accessing modified property
-    print("Modified default_action:", settings.all_settings.default_action)
+    print("Modified default_action:", settings.take.default_action)
 
     # Accessing all properties again
-    all_settings = settings.all_settings
+    all_settings = settings.take
     print("All settings:", all_settings)
 
     # Examples of accessing individual properties
