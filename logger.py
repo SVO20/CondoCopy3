@@ -4,8 +4,10 @@ from functools import partial
 from loguru import logger
 
 # Initials
-scenario = "ALL"    # "ALL" , "FILE_ONLY" , "STDOUTPUT_ONLY" accepted
+scenario = "STDOUTPUT_ONLY"    # "ALL" , "FILE_ONLY" , "STDOUTPUT_ONLY" accepted
 level = "TRACE"  # "OMIT", "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR" ("CRITICAL")
+
+level = "WARNING"
 enqueue = True
 
 # Customization
