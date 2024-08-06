@@ -12,8 +12,10 @@ from PyQt5.QtWidgets import (QAction, QApplication, QDialog, QLabel, QMenu,
                              QPushButton, QSystemTrayIcon, QVBoxLayout)
 
 from logger import debug, error, info, omit, success, trace, warning
-from initialization import d_cameras
-from match_camera import get_removable_drives, generate_id, match_camera_model
+from my_utils import get_removable_drives, generate_id
+from match_camera import match_camera_model
+
+from settings import d_cameras, settings
 
 
 # deque_removables format --v
@@ -110,7 +112,6 @@ class TrayApp:
         dialog = SDCardDialog('A:')
         dialog.setWindowModality(Qt.NonModal)
         dialog.show()
-
 
     def exit(self):
         # Hide the tray icon and quit the application

@@ -67,6 +67,18 @@ class Settings:
         return self._settings_namespace
 
 
+def load_settings(toml_filename) -> Settings:
+    """Load app settings from a .toml file"""
+
+    try:
+        settings = Settings(toml_filename)
+        success(f"'{toml_filename}' loaded successfully.")
+        return settings
+    except Exception as e:
+        error(f"Failed to load settings from {toml_filename}: {e}")
+        raise
+
+
 def load_cameras(toml_filename) -> dict:
     """Load and validate cameras' "footprints" from a .toml file"""
 
@@ -107,19 +119,8 @@ def load_cameras(toml_filename) -> dict:
         raise
 
 
-def load_settings(toml_filename) -> Settings:
-    """Load app settings from a .toml file"""
-
-    try:
-        settings = Settings(toml_filename)
-        success(f"'{toml_filename}' loaded successfully.")
-        return settings
-    except Exception as e:
-        error(f"Failed to load settings from {toml_filename}: {e}")
-        raise
-
-
 # ===================================
 
 d_cameras = load_cameras("cameras.toml")
+settings = Settings("settings.py")
 
