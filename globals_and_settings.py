@@ -1,4 +1,5 @@
 import os
+from enum import Enum, auto
 from types import SimpleNamespace
 
 import toml
@@ -122,5 +123,14 @@ def load_cameras(toml_filename) -> dict:
 # ===================================
 
 d_cameras = load_cameras("cameras.toml")
-settings = Settings("settings.py")
+settings = Settings("settings.toml")
+info(settings.take)
 
+
+# ====================================
+
+class EAction(Enum):
+    RESTART = auto()
+    PAUSE = auto()
+    RESUME = auto()
+    STOP = auto()

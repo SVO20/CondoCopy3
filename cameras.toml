@@ -1,5 +1,4 @@
-# This configuration file contains "fingerprints" of SD card structures for various cameras
-
+# This configuration file contains 'fingerprints' of SD card structures for various cameras
 # format:
 #
 # [cameras.Camera_name]
@@ -25,6 +24,5 @@ structure = ["DCIM", "MISC", "PRIVATE/SONY"]
 [cameras.Android_Device]
 structure = ["DCIM/Camera", "Pictures/Screenshots", "Download"]
 
-[cameras.Vary_DCIF_compat]
+[cameras.DCIF_compatible]
 structure = ["DCIM"]
-

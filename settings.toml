@@ -8,3 +8,4 @@ clear_DCIM_aftermove = false
 clear_others_aftermove = false
 full_automated_mode = false
 full_automated_MOVE = false
+user_level_logging = false
