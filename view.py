@@ -1,11 +1,11 @@
 import sys
-
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QSize, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, QMenu, \
-    QAction, QHBoxLayout, QScrollArea, QApplication
+    QAction, QHBoxLayout, QScrollArea, QApplication, QSizePolicy
 
 from logger import trace
+
 
 class ProgramViewQ(QWidget):
     # Signal for exiting the application
@@ -19,7 +19,7 @@ class ProgramViewQ(QWidget):
 
         # Set window title, icon, size
         self.setWindowTitle("CondoCopy3 v.0")
-        self.setWindowIcon(QIcon("icon.png"))
+        self.setWindowIcon(QIcon("icon1.png"))
         self.setMinimumSize(500, 220)  # Minimum size set to 500x220
 
         # Setting up the interface
@@ -67,6 +67,15 @@ class ProgramViewQ(QWidget):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
+        self.adjust_size_and_position()
+
+    def center_window(self):
+        """Center the window on the screen."""
+        frame_geom = self.frameGeometry()
+        screen_center = self.screen().availableGeometry().center()
+        frame_geom.moveCenter(screen_center)
+        self.move(frame_geom.topLeft())
+
     def closeEvent(self, event):
         # Emit a signal to close the application globally
         self.qts_exit_application.emit()
@@ -103,21 +112,33 @@ class ProgramViewQ(QWidget):
         else:
             self.info_label.hide()
             for device in devices:
-                device_info = QLabel(f"{device['drive']}: {device['id']} - {device.get('model', 'None')}")
-                self.device_layout.addWidget(device_info)
+                device_info_layout = QHBoxLayout()
+
+                device_info = QLabel(
+                    f"{device['drive']}: {device['id']} - {device.get('model', 'None')}")
+                device_info_layout.addWidget(device_info)
 
                 # Adding additional buttons if model is present
                 if device.get('model') is not None:
                     button_layout = QHBoxLayout()
+                    button_layout.addStretch(1)  # Push buttons to the right
+
                     go_button = QPushButton("go")
                     nome_button = QPushButton("no me")
                     see_button = QPushButton("see")
+
+                    # Make buttons small and square
+                    go_button.setFixedSize(30, 30)
+                    nome_button.setFixedSize(30, 30)
+                    see_button.setFixedSize(30, 30)
 
                     button_layout.addWidget(go_button)
                     button_layout.addWidget(nome_button)
                     button_layout.addWidget(see_button)
 
-                    self.device_layout.addLayout(button_layout)
+                    device_info_layout.addLayout(button_layout)
+
+                self.device_layout.addLayout(device_info_layout)
 
         # Adjust window size based on content
         self.adjust_size_and_position()
@@ -133,13 +154,10 @@ class ProgramViewQ(QWidget):
         self.resize(new_width, new_height)
 
         # Center the window on the screen after resizing
-        frame_geom = self.frameGeometry()
-        screen_center = self.screen().availableGeometry().center()
-        frame_geom.moveCenter(screen_center)
-        self.move(frame_geom.topLeft())
+        self.center_window()
 
 
-# Example usage:
+# # Example usage:
 # if __name__ == "__main__":
 #     # Create the application object
 #     app = QApplication(sys.argv)
