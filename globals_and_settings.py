@@ -129,7 +129,7 @@ info(settings.take)
 
 # ====================================
 
-class EAction(Enum):
+class Action(Enum):
     RESTART = auto()
     PAUSE = auto()
     RESUME = auto()
