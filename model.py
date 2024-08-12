@@ -4,35 +4,6 @@ from globals_and_settings import Action
 from logger import warning, info, trace
 
 
-class MonThreadQ(QThread):
-    """Thread for monitoring task"""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._paused = False
-
-    def run(self):
-        while not self.isInterruptionRequested():           # Check if interruption needed
-            while self._paused:                             # Check if paused
-                if self.isInterruptionRequested():          # Avoid interruption miss when paused
-                    return
-                QThread.msleep(100)                         # Avoid busy
-
-            # V-- Thread routine --V
-
-            info("Monitoring...")
-            QThread.sleep(1)
-
-    def pause(self):
-        self._paused = True
-
-    def resume(self):
-        self._paused = False
-
-    def stop(self):
-        self.requestInterruption()
-
-
 class MonitoringTaskQ(QObject):
     """Manage monitoring task and handle actions"""
 
@@ -82,3 +53,34 @@ class MonitoringTaskQ(QObject):
 
     def get_data(self):
         return self._data
+
+
+# ========================
+
+class MonThreadQ(QThread):
+    """Thread for monitoring task"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._paused = False
+
+    def run(self):
+        while not self.isInterruptionRequested():  # Check if interruption needed
+            while self._paused:  # Check if paused
+                if self.isInterruptionRequested():  # Avoid interruption miss when paused
+                    return
+                QThread.msleep(100)  # Avoid busy
+
+            # V-- Thread routine --V
+
+            info("Monitoring...")
+            QThread.sleep(1)
+
+    def pause(self):
+        self._paused = True
+
+    def resume(self):
+        self._paused = False
+
+    def stop(self):
+        self.requestInterruption()
