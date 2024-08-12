@@ -1,10 +1,77 @@
 import sys
 from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QSize, QTimer
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, QMenu, \
-    QAction, QHBoxLayout, QScrollArea, QApplication, QSizePolicy
+from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush, QPen
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, QMenu, QAction, QHBoxLayout, QScrollArea, QApplication, QSizePolicy
 
 from logger import trace
+
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QPainter, QColor, QBrush
+from PyQt5.QtWidgets import QWidget
+
+
+from PyQt5.QtWidgets import QWidget
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QPainter, QColor, QBrush, QPen
+
+
+class MonitoringIndicator(QWidget):
+    qts_monitoring_onstate = pyqtSignal(bool)  # Signal to emit the state (ON/OFF)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(20, 20)  # Set a fixed size for the lamp
+        self._onstate = True  # Initial state is ON
+        self._pressed = False  # Track whether the button is being pressed
+        self._hover = False  # Track whether the mouse is hovering over the button
+
+    def enterEvent(self, event):
+        self._hover = True
+        self.update()  # Trigger a repaint
+        event.accept()
+
+    def leaveEvent(self, event):
+        self._hover = False
+        self.update()  # Trigger a repaint
+        event.accept()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        # Determine color based on the state
+        color = QColor(0, 255, 0) if self._onstate else QColor(105, 105, 105)  # Green for ON, Dark Gray for OFF
+
+        # Adjust the border color based on hover state
+        border_color = QColor(0, 0, 255) if self._hover else QColor(255, 255, 255)
+
+        # Draw the circular indicator
+        painter.setBrush(QBrush(color))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawEllipse(2, 2, self.width() - 4, self.height() - 4)
+
+        if self._pressed:
+            # Draw shade
+            painter.setBrush(QBrush(color.darker(150)))  # Darker inner circle when pressed
+            painter.setPen(QPen(QColor(color.darker(150)), 1))
+            painter.drawEllipse(4, 4, self.width() - 8, self.height() - 8)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._pressed = True
+            self.update()  # Update the visual appearance
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._pressed = False
+            if self.rect().contains(event.pos()):
+                # Toggle the state
+                self._onstate = not self._onstate
+                self.qts_monitoring_onstate.emit(self._onstate)
+            self.update()  # Update the visual appearance
+        super().mouseReleaseEvent(event)
+
+
 
 
 class ProgramViewQ(QWidget):
@@ -25,9 +92,16 @@ class ProgramViewQ(QWidget):
         # Setting up the interface
         self.layout = QVBoxLayout()
 
-        # Add an initial label for when no devices are detected
-        self.info_label = QLabel("... no removables ...")
-        self.layout.addWidget(self.info_label)
+        # Top layout with label and monitoring indicator
+        self.top_layout = QHBoxLayout()
+        self.status_label = QLabel("... no removables ...")
+        self.monitoring_indicator = MonitoringIndicator()
+
+        # Adding the label and monitoring indicator to the top layout
+        self.top_layout.addWidget(self.status_label)
+        self.top_layout.addStretch(1)  # Push monitoring indicator to the right
+        self.top_layout.addWidget(self.monitoring_indicator)
+        self.layout.addLayout(self.top_layout)
 
         # Placeholder layout for device information within a scroll area
         self.scroll_area = QScrollArea(self)
@@ -54,7 +128,7 @@ class ProgramViewQ(QWidget):
         self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
 
         # Initialize system tray with context menu options
-        self.tray_icon = QSystemTrayIcon(QIcon("icon.png"), parent=self)
+        self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), parent=self)
         tray_menu = QMenu(self)
         restore_action = QAction("Restore", self)
         restore_action.triggered.connect(self.show_window)
@@ -107,15 +181,17 @@ class ProgramViewQ(QWidget):
                 widget_to_remove.deleteLater()
 
         if not devices:
-            self.info_label.setText("... no removables ...")
-            self.info_label.show()
+            self.status_label.setText("... no removables ...")
+            self.monitoring_indicator.hide()  # Hide the monitoring indicator if no devices are found
+            self.status_label.show()
         else:
-            self.info_label.hide()
+            self.status_label.setText("Removables Found:")
+            self.monitoring_indicator.show()  # Show the monitoring indicator if devices are found
             for device in devices:
                 device_info_layout = QHBoxLayout()
 
                 device_info = QLabel(
-                    f"{device['drive']}: {device['id']} - {device.get('model', 'None')}")
+                    f"{device['drive']} -- {device['id']} -- {device.get('model', 'None')}")
                 device_info_layout.addWidget(device_info)
 
                 # Adding additional buttons if model is present
@@ -123,17 +199,17 @@ class ProgramViewQ(QWidget):
                     button_layout = QHBoxLayout()
                     button_layout.addStretch(1)  # Push buttons to the right
 
-                    go_button = QPushButton("go")
-                    nome_button = QPushButton("no me")
+                    copy_button = QPushButton("C")
+                    move_button = QPushButton("M")
                     see_button = QPushButton("see")
 
                     # Make buttons small and square
-                    go_button.setFixedSize(30, 30)
-                    nome_button.setFixedSize(30, 30)
+                    copy_button.setFixedSize(30, 30)
+                    move_button.setFixedSize(30, 30)
                     see_button.setFixedSize(30, 30)
 
-                    button_layout.addWidget(go_button)
-                    button_layout.addWidget(nome_button)
+                    button_layout.addWidget(copy_button)
+                    button_layout.addWidget(move_button)
                     button_layout.addWidget(see_button)
 
                     device_info_layout.addLayout(button_layout)
@@ -157,25 +233,25 @@ class ProgramViewQ(QWidget):
         self.center_window()
 
 
-# # Example usage:
-# if __name__ == "__main__":
-#     # Create the application object
-#     app = QApplication(sys.argv)
-#
-#     # Create the main window object
-#     window = ProgramViewQ()
-#
-#     # Show the window
-#     window.show()
-#
-#     # Create a list of devices to simulate data change
-#     devices = [
-#         {'drive': 'G:', 'id': 'BULBA1_ABC162', 'model': None},
-#         {'drive': 'H:', 'id': 'NO_LABEL_MCBOA', 'model': 'DCIF_compatible'}
-#     ]
-#
-#     # Set a QTimer to call the on_data_changed method after 5 seconds
-#     QTimer.singleShot(5000, lambda: window.on_data_changed(devices))
-#
-#     # Start the application's event loop
-#     sys.exit(app.exec_())
+# For testing purposes:
+if __name__ == "__main__":
+    # Create the application object
+    app = QApplication(sys.argv)
+
+    # Create the main window object
+    window = ProgramViewQ()
+
+    # Show the window
+    window.show()
+
+    # Create a list of devices to simulate data change
+    devices = [
+        {'drive': 'G:', 'id': 'BULBA1_ABC162', 'model': None},
+        {'drive': 'H:', 'id': 'NO_LABEL_MCBOA', 'model': 'DCIF_compatible'}
+    ]
+
+    # Set a QTimer to call the on_data_changed method after 5 seconds
+    QTimer.singleShot(5000, lambda: window.on_data_changed(devices))
+
+    # Start the application's event loop
+    sys.exit(app.exec_())
