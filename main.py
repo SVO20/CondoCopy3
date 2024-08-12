@@ -1,11 +1,12 @@
 import asyncio
 import sys
 
+from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication
 from qasync import QEventLoop
 
-from globals_and_settings import settings
 from controller import ControllerTaskQ
+from globals_and_settings import settings
 from model import MonitoringTaskQ
 from view import ProgramViewQ
 
@@ -19,13 +20,20 @@ async def main():
     view = ProgramViewQ()
     controller = ControllerTaskQ(model_monitoring, view)
 
-    # Connect core signal triggered by QApplication.quit() with  on_shutdown slot
+    # Connect core signal triggered by QApplication.quit() with on_shutdown slot
     app.aboutToQuit.connect(controller.on_shutdown)
 
-    await asyncio.gather(controller.run_monitoring(),
-                         controller.run_view(),
-                         controller.run_user_logging() if settings.take.user_level_logging
-                         else asyncio.sleep(0))
+    async def run_tasks():
+        """Schedule asyncio tasks"""
+        await asyncio.create_task(controller.run_monitoring())
+        if settings.take.user_level_logging:
+            await asyncio.create_task(controller.run_user_logging())
+
+    # to the end of the Qt loop
+    QTimer.singleShot(0, lambda: asyncio.create_task(run_tasks()))
+
+    # Launch the Qt own events -> Run UI -> run_tasks()
+    app.exec_()
 
 
 if __name__ == "__main__":
