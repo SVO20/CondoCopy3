@@ -1,26 +1,20 @@
-import sys
-from PyQt5.QtCore import Qt, pyqtSignal, QEvent, QSize, QTimer
-from PyQt5.QtGui import QIcon, QPainter, QColor, QBrush, QPen
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, QMenu, QAction, QHBoxLayout, QScrollArea, QApplication, QSizePolicy
+from PyQt5.QtCore import QEvent
+from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QPainter, QColor, QBrush, QPen
+from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, QMenu, QAction, \
+    QHBoxLayout, QScrollArea
+from PyQt5.QtWidgets import QWidget
 
 from logger import trace
 
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QPainter, QColor, QBrush
-from PyQt5.QtWidgets import QWidget
-
-
-from PyQt5.QtWidgets import QWidget
-from PyQt5.QtCore import pyqtSignal, Qt
-from PyQt5.QtGui import QPainter, QColor, QBrush, QPen
-
 
 class MonitoringIndicator(QWidget):
-    qts_monitoring_onstate = pyqtSignal(bool)  # Signal to emit the state (ON/OFF)
+    qts_user_force_monstate = pyqtSignal(bool)  # Signal to force onstate
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(20, 20)  # Set a fixed size for the lamp
+        self.setFixedSize(20, 20)  # Set a fixed size for the indicator
         self._onstate = True  # Initial state is ON
         self._pressed = False  # Track whether the button is being pressed
         self._hover = False  # Track whether the mouse is hovering over the button
@@ -38,19 +32,17 @@ class MonitoringIndicator(QWidget):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        # Determine color based on the state
-        color = QColor(0, 255, 0) if self._onstate else QColor(105, 105, 105)  # Green for ON, Dark Gray for OFF
-
-        # Adjust the border color based on hover state
-        border_color = QColor(0, 0, 255) if self._hover else QColor(255, 255, 255)
-
-        # Draw the circular indicator
+        color = QColor(0, 255, 0) \
+            if self._onstate \
+            else QColor(105, 105, 105)  # Green for ON, Dark Gray for OFF
+        border_color = QColor(0, 0, 255) \
+            if self._hover \
+            else QColor(255, 255, 255)  # Border color changes with hover state
         painter.setBrush(QBrush(color))
         painter.setPen(QPen(border_color, 1))
         painter.drawEllipse(2, 2, self.width() - 4, self.height() - 4)
 
         if self._pressed:
-            # Draw shade
             painter.setBrush(QBrush(color.darker(150)))  # Darker inner circle when pressed
             painter.setPen(QPen(QColor(color.darker(150)), 1))
             painter.drawEllipse(4, 4, self.width() - 8, self.height() - 8)
@@ -64,14 +56,18 @@ class MonitoringIndicator(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._pressed = False
-            if self.rect().contains(event.pos()):
-                # Toggle the state
-                self._onstate = not self._onstate
-                self.qts_monitoring_onstate.emit(self._onstate)
             self.update()  # Update the visual appearance
+            if self.rect().contains(event.pos()):
+                self._onstate = not self._onstate
+
+                # Emit the signal to force new _onstate
+                self.qts_user_force_monstate.emit(self._onstate)
         super().mouseReleaseEvent(event)
 
-
+    def change_onstate(self, onstate: bool):
+        """ Change the onstate without emitting a signal. """
+        self._onstate = onstate
+        self.update()  # Update the visual appearance
 
 
 class ProgramViewQ(QWidget):
@@ -96,7 +92,6 @@ class ProgramViewQ(QWidget):
         self.top_layout = QHBoxLayout()
         self.status_label = QLabel("... no removables ...")
         self.monitoring_indicator = MonitoringIndicator()
-
         # Adding the label and monitoring indicator to the top layout
         self.top_layout.addWidget(self.status_label)
         self.top_layout.addStretch(1)  # Push monitoring indicator to the right
@@ -141,7 +136,9 @@ class ProgramViewQ(QWidget):
         self.tray_icon.setContextMenu(tray_menu)
         self.tray_icon.show()
 
+        self.show_window()
         self.adjust_size_and_position()
+
 
     def center_window(self):
         """Center the window on the screen."""
@@ -182,11 +179,11 @@ class ProgramViewQ(QWidget):
 
         if not devices:
             self.status_label.setText("... no removables ...")
-            self.monitoring_indicator.hide()  # Hide the monitoring indicator if no devices are found
+            # self.monitoring_indicator.hide()  # Hide the monitoring indicator if no devices are found
             self.status_label.show()
         else:
             self.status_label.setText("Removables Found:")
-            self.monitoring_indicator.show()  # Show the monitoring indicator if devices are found
+            # self.monitoring_indicator.show()  # Show the monitoring indicator if devices are found
             for device in devices:
                 device_info_layout = QHBoxLayout()
 
@@ -232,26 +229,25 @@ class ProgramViewQ(QWidget):
         # Center the window on the screen after resizing
         self.center_window()
 
-
-# For testing purposes:
-if __name__ == "__main__":
-    # Create the application object
-    app = QApplication(sys.argv)
-
-    # Create the main window object
-    window = ProgramViewQ()
-
-    # Show the window
-    window.show()
-
-    # Create a list of devices to simulate data change
-    devices = [
-        {'drive': 'G:', 'id': 'BULBA1_ABC162', 'model': None},
-        {'drive': 'H:', 'id': 'NO_LABEL_MCBOA', 'model': 'DCIF_compatible'}
-    ]
-
-    # Set a QTimer to call the on_data_changed method after 5 seconds
-    QTimer.singleShot(5000, lambda: window.on_data_changed(devices))
-
-    # Start the application's event loop
-    sys.exit(app.exec_())
+# # For testing purposes:
+# if __name__ == "__main__":
+#     # Create the application object
+#     app = QApplication(sys.argv)
+#
+#     # Create the main window object
+#     window = ProgramViewQ()
+#
+#     # Show the window
+#     window.show()
+#
+#     # Create a list of devices to simulate data change
+#     devices = [
+#         {'drive': 'G:', 'id': 'BULBA1_ABC162', 'model': None},
+#         {'drive': 'H:', 'id': 'NO_LABEL_MCBOA', 'model': 'DCIF_compatible'}
+#     ]
+#
+#     # Set a QTimer to call the on_data_changed method after 5 seconds
+#     QTimer.singleShot(5000, lambda: window.on_data_changed(devices))
+#
+#     # Start the application's event loop
+#     sys.exit(app.exec_())
