@@ -1,10 +1,12 @@
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
 from globals_and_settings import Action
-from logger import warning, info
+from logger import warning, info, trace
 
 
 class MonThreadQ(QThread):
+    """Thread for monitoring task"""
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._paused = False
@@ -12,26 +14,28 @@ class MonThreadQ(QThread):
     def run(self):
         while not self.isInterruptionRequested():           # Check if interruption needed
             while self._paused:                             # Check if paused
-                while not self.isInterruptionRequested():   # Avoid interruption miss
-                    QThread.msleep(100)                     # Avoid busy
+                if self.isInterruptionRequested():          # Avoid interruption miss when paused
+                    return
+                QThread.msleep(100)                         # Avoid busy
 
             # V-- Thread routine --V
 
-            print("Working...")
+            info("Monitoring...")
             QThread.sleep(1)
 
     def pause(self):
         self._paused = True
 
     def resume(self):
-        pass
+        self._paused = False
 
     def stop(self):
         self.requestInterruption()
 
 
-
 class MonitoringTaskQ(QObject):
+    """Manage monitoring task and handle actions"""
+
     qts_data_changed = pyqtSignal(dict)
     qts_exception_condocopymove = pyqtSignal()
     qts_state_condocopymove = pyqtSignal()
@@ -42,37 +46,39 @@ class MonitoringTaskQ(QObject):
 
         self._data = {}
 
+    @pyqtSlot()
+    def manage_mon(self, action: Action):
+        match action:
+            case Action.RESTART:
+                # Forced stop implementation
+                if self.mon_qthread.isRunning():
+                    # Running thread stopping
+                    self.mon_qthread.stop()
+                    if self.mon_qthread.wait(100):
+                        trace(f"The MonThreadQ thread safely interrupted")
+                        # thread interrupted - OK
+                    else:
+                        warning(f"Unsafe interruption of the MonThreadQ thread!")
+                        self.mon_qthread.terminate()
+                        self.mon_qthread.wait()
+                        # thread interrupted - NOT OK
+
+                # Stopped, interrupted or never been started thread
+                self.mon_qthread = MonThreadQ()  # <-- new MonThreadQ() instance
+                self.mon_qthread.start()
+                info(f"Monitoring thread started successfully")
+            case Action.PAUSE:
+                self.mon_qthread.pause()
+            case Action.RESUME:
+                self.mon_qthread.resume()
+            case Action.STOP:
+                self.mon_qthread.stop()
+            case _:
+                raise ValueError(f"Unknown action: {action}")
+
     def update_data(self, new_data: dict):
         self._data = new_data
         self.qts_data_changed.emit(self._data)
 
     def get_data(self):
         return self._data
-
-    @pyqtSlot()
-    def manage_mon(self, action: Action):
-        match action:
-            case Action.RESTART:
-                if self.mon_qthread.isRunning():
-                    # Running thread stopping
-                    self.mon_qthread.stop()
-                    if self.mon_qthread.wait(100):
-                        pass
-                        # thread interrupted - OK
-                    else:
-                        warning(f"Unsafe monitoring thread interruption!")
-                        self.mon_qthread.terminate()
-                        self.mon_qthread.wait()
-                        # thread interrupted - NOT OK
-                # Stopped, interrupted or never been started thread
-                self.mon_qthread = MonThreadQ()  # <-- new MonThreadQ() instance
-                self.mon_qthread.start()
-                info(f"Monitoring thread started successfully")
-            case Action.PAUSE:
-                pass
-            case Action.RESUME:
-                pass
-            case Action.STOP:
-                pass
-            case _:
-                raise ValueError(f"Unknown action: {action}")
