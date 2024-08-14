@@ -7,7 +7,7 @@ from qasync import QEventLoop
 
 from controller import ControllerTaskQ
 from globals_and_settings import settings
-from model import MonitoringTaskQ
+from model import ModelManagerQ
 from view import ProgramViewQ
 
 
@@ -16,12 +16,12 @@ async def main():
     loop = QEventLoop(app)
     asyncio.set_event_loop(loop)
 
-    model_monitoring = MonitoringTaskQ()
+    model_manager = ModelManagerQ()
     view = ProgramViewQ()
-    controller = ControllerTaskQ(model_monitoring, view)
+    controller = ControllerTaskQ(model_manager, view)
 
     # Connect core signal triggered by QApplication.quit() with on_shutdown slot
-    app.aboutToQuit.connect(controller.on_shutdown)
+    app.aboutToQuit.connect(controller.before_shutdown)
 
     async def run_tasks():
         """Schedule asyncio tasks"""

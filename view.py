@@ -1,3 +1,5 @@
+from typing import Any
+
 from PyQt5.QtCore import QEvent
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIcon
@@ -14,10 +16,10 @@ class MonitoringIndicator(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedSize(20, 20)  # Set a fixed size for the indicator
-        self._onstate = True  # Initial state is ON
-        self._pressed = False  # Track whether the button is being pressed
-        self._hover = False  # Track whether the mouse is hovering over the button
+        self.setFixedSize(20, 20)   # Set a fixed size for the indicator
+        self._onstate = True        # Initial state is ON
+        self._pressed = False       # Track whether the button is being pressed
+        self._hover = False         # Track whether the mouse is hovering over the button
 
     def enterEvent(self, event):
         self._hover = True
@@ -72,8 +74,8 @@ class MonitoringIndicator(QWidget):
 
 class ProgramViewQ(QWidget):
     # Signal for exiting the application
-    qts_exit_application = pyqtSignal()
-    qts_user_condocopymove = pyqtSignal()
+    to_exit_application = pyqtSignal()
+    qts_user_action = pyqtSignal(Any)
 
     def __init__(self):
         super().__init__()
@@ -91,11 +93,11 @@ class ProgramViewQ(QWidget):
         # Top layout with label and monitoring indicator
         self.top_layout = QHBoxLayout()
         self.status_label = QLabel("... no removables ...")
-        self.monitoring_indicator = MonitoringIndicator()
+        self.mon_indic = MonitoringIndicator()
         # Adding the label and monitoring indicator to the top layout
         self.top_layout.addWidget(self.status_label)
         self.top_layout.addStretch(1)  # Push monitoring indicator to the right
-        self.top_layout.addWidget(self.monitoring_indicator)
+        self.top_layout.addWidget(self.mon_indic)
         self.layout.addLayout(self.top_layout)
 
         # Placeholder layout for device information within a scroll area
@@ -139,7 +141,6 @@ class ProgramViewQ(QWidget):
         self.show_window()
         self.adjust_size_and_position()
 
-
     def center_window(self):
         """Center the window on the screen."""
         frame_geom = self.frameGeometry()
@@ -149,7 +150,7 @@ class ProgramViewQ(QWidget):
 
     def closeEvent(self, event):
         # Emit a signal to close the application globally
-        self.qts_exit_application.emit()
+        self.to_exit_application.emit()
         event.accept()  # Accept the close event
 
     def changeEvent(self, event):
@@ -169,7 +170,7 @@ class ProgramViewQ(QWidget):
     def minimize_to_tray(self):
         self.hide()
 
-    def on_data_changed(self, devices):
+    def on_visualize_req(self, devices):
         # Update the UI based on the list of devices
         self._devices = devices
         for i in reversed(range(self.device_layout.count())):
@@ -179,11 +180,11 @@ class ProgramViewQ(QWidget):
 
         if not devices:
             self.status_label.setText("... no removables ...")
-            # self.monitoring_indicator.hide()  # Hide the monitoring indicator if no devices are found
+            # Hide the monitoring indicator if no devices are found
             self.status_label.show()
         else:
             self.status_label.setText("Removables Found:")
-            # self.monitoring_indicator.show()  # Show the monitoring indicator if devices are found
+            # Show the monitoring indicator if devices are found
             for device in devices:
                 device_info_layout = QHBoxLayout()
 
@@ -192,6 +193,7 @@ class ProgramViewQ(QWidget):
                 device_info_layout.addWidget(device_info)
 
                 # Adding additional buttons if model is present
+                # todo vv--  --vv
                 if device.get('model') is not None:
                     button_layout = QHBoxLayout()
                     button_layout.addStretch(1)  # Push buttons to the right

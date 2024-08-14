@@ -1,26 +1,27 @@
+from typing import Optional, Any
+
 from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, QThread
 
-from globals_and_settings import Action
+from globals_and_settings import Action, CCAction
 from logger import warning, info, trace
 
 
-class MonitoringTaskQ(QObject):
-    """Manage monitoring task and handle actions"""
+class ModelManagerQ(QObject):
+    """Manage monitoring and copying tasks and handle actions"""
 
     qts_data_changed = pyqtSignal(dict)
-    qts_exception_condocopymove = pyqtSignal()
-    qts_state_condocopymove = pyqtSignal()
+    qts_exception_condocopy = pyqtSignal(Exception)
+    qts_state_condocopy = pyqtSignal(Optional[Any])
 
     def __init__(self):
         super().__init__()
         self.mon_qthread = MonThreadQ()  # <-- ensure mon_qthread is of type MonThreadQ()
 
-        self._data = {}
-
     @pyqtSlot()
     def manage_mon(self, action: Action):
         match action:
             case Action.RESTART:
+
                 # Forced stop implementation
                 if self.mon_qthread.isRunning():
                     # Running thread stopping
@@ -38,6 +39,7 @@ class MonitoringTaskQ(QObject):
                 self.mon_qthread = MonThreadQ()  # <-- new MonThreadQ() instance
                 self.mon_qthread.start()
                 info(f"Monitoring thread started successfully")
+
             case Action.PAUSE:
                 self.mon_qthread.pause()
             case Action.RESUME:
@@ -45,14 +47,21 @@ class MonitoringTaskQ(QObject):
             case Action.STOP:
                 self.mon_qthread.stop()
             case _:
-                raise ValueError(f"Unknown action: {action}")
+                raise ValueError(f"Unknown action (monitoring): {action}")
 
-    def update_data(self, new_data: dict):
-        self._data = new_data
-        self.qts_data_changed.emit(self._data)
-
-    def get_data(self):
-        return self._data
+    @pyqtSlot()
+    def manage_condocopy(self, action: CCAction, opt_args=None):
+        match action:
+            case CCAction.CCOPY:
+                pass
+            case CCAction.CMOVE:
+                pass
+            case CCAction.CSIMULATE:
+                pass
+            case CCAction.CRENAME:
+                pass
+            case _:
+                raise ValueError(f"Unknown action(monitoring): {action}")
 
 
 # ========================

@@ -4,7 +4,7 @@ from types import SimpleNamespace
 
 import toml
 
-from logger import debug, error, info, omit, success, trace, warning
+from logger import debug, error, info, success
 from my_utils import expand_compressed
 
 # ============== resources =============
@@ -22,6 +22,8 @@ DEFAULT_CAMERAS = (
     b'jzsi382K2TKeH5+wsrgPjzslXGlVzUp2rlUSF2WR+/c6qVroJyTWalvdXf0+V79/62OfN5rwNHK3bXn1'
     b'YzqdfmR3NlCsatKyrlLcSYFjNtHhO+xd5OGLR0wQojIui/F6qp9Up3n9znnN6blyBreV0L37rqOIruAf'
     b'sT0aYg==')
+
+
 # =======================================
 
 
@@ -128,9 +130,35 @@ info(settings.take)
 
 
 # ====================================
+_autoenum_next_value = 1
 
-class Action(Enum):
+
+class AutoEnum(Enum):
+    def _generate_next_value_(name, start, count, last_values):
+        global _autoenum_next_value
+        val = _autoenum_next_value
+        _autoenum_next_value += 1
+        return val
+
+
+class Action(AutoEnum):
     RESTART = auto()
     PAUSE = auto()
     RESUME = auto()
     STOP = auto()
+
+
+class UserAction(AutoEnum):
+    PAUSE_MON = auto()
+    RESUME_MON = auto()
+    CCOPY_ALL = auto()
+    CMOVE_ALL = auto()
+    CSIMULATE_ALL = auto()
+    CRENAME_LIST = auto()
+
+
+class CCAction(AutoEnum):
+    CCOPY = auto()
+    CMOVE = auto()
+    CSIMULATE = auto()
+    CRENAME = auto()
