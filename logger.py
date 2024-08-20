@@ -7,7 +7,7 @@ from loguru import logger
 scenario = "STDOUTPUT_ONLY"    # "ALL" , "FILE_ONLY" , "STDOUTPUT_ONLY" accepted
 level = "TRACE"  # "OMIT", "TRACE", "DEBUG", "INFO", "SUCCESS", "WARNING", "ERROR" ("CRITICAL")
 
-level = "WARNING"
+level = "TRACE"
 enqueue = True
 
 # Customization
