@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional
 
 from PyQt5.QtCore import QEvent
 from PyQt5.QtCore import pyqtSignal, Qt
@@ -9,7 +9,198 @@ from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, Q
 from PyQt5.QtWidgets import QWidget
 
 from logger import trace
+from myqtclasses import *
 
+
+
+class ProgramViewQ(QWidget):
+    # Signal for exiting the application
+    to_exit_application = pyqtSignal()
+    qts_user_action = pyqtSignal(Any)
+
+    def __init__(self):
+        super().__init__()
+        self._devices = []
+
+        # Set window title, icon, size
+        self.setWindowTitle("CondoCopy3 v.0")
+        self.setWindowIcon(QIcon("icon1.png"))
+        self.setMinimumSize(500, 220)  # Minimum size set to 500x220
+
+        # VERTICAL
+        self.layout = QVBoxLayout()
+
+        # Top layout with label and monitoring indicator
+        self.top_layout = QHBoxLayout()
+        self.status_label = QLabel("... no removables ...(initial)")
+        self.mon_indic = QLabel("Monitoring Indicator Placeholder")  # Placeholder for MonitoringIndicator
+        # Adding the label and monitoring indicator to the top layout
+        self.top_layout.addWidget(self.status_label)
+        self.top_layout.addStretch(1)  # Push monitoring indicator to the right
+        self.top_layout.addWidget(self.mon_indic)
+
+        # HORIZONTAL
+        self.layout.addLayout(self.top_layout)
+
+        # Placeholder layout for device information without scroll area
+        self.device_layout = QVBoxLayout()
+
+        # VERTICAL
+        self.layout.addLayout(self.device_layout)
+
+        # Control buttons
+        self.to_tray_button = QPushButton("toTray")
+        self.close_button = QPushButton("Close")
+        self.to_tray_button.clicked.connect(self.minimize_to_tray)
+        self.close_button.clicked.connect(self.perform_exit)
+
+        footer_layout = QHBoxLayout()
+        footer_layout.addWidget(self.to_tray_button)
+        footer_layout.addWidget(self.close_button)
+
+        # HORIZONTAL
+        self.layout.addLayout(footer_layout)
+
+        # APPLY
+        self.setLayout(self.layout)
+
+        # Configure window flags to make it appear as the main window on the taskbar
+        self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
+
+        # Initialize system tray with context menu options
+        self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), parent=self)
+        tray_menu = QMenu(self)
+        restore_action = QAction("Restore", self)
+        restore_action.triggered.connect(self.show_window)
+        tray_menu.addAction(restore_action)
+
+        exit_action = QAction("Exit", self)
+        exit_action.triggered.connect(self.perform_exit)
+        tray_menu.addAction(exit_action)
+
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.show()
+
+        self.show_window()
+        self.adjust_size_and_position()
+
+    def center_window(self):
+        """Center the window on the screen."""
+        frame_geom = self.frameGeometry()
+        screen_center = self.screen().availableGeometry().center()
+        frame_geom.moveCenter(screen_center)
+        self.move(frame_geom.topLeft())
+
+    def closeEvent(self, event):
+        # Emit a signal to close the application globally
+        self.to_exit_application.emit()
+        event.accept()  # Accept the close event
+
+    def changeEvent(self, event):
+        # Minimize to tray if window is minimized
+        if event.type() == QEvent.WindowStateChange and self.isMinimized():
+            self.hide()
+
+    def show_window(self):
+        # Restore the window from minimized state
+        self.showNormal()
+
+    def perform_exit(self):
+        # Hide the system tray icon and close the application
+        self.tray_icon.hide()
+        self.close()  # This will also trigger the closeEvent
+
+    def minimize_to_tray(self):
+        self.hide()
+
+    def adjust_size_and_position(self):
+        # Ensure that the widget size adjusts according to its content
+        self.device_widget.adjustSize()
+        self.adjustSize()
+
+        # Ensure that the window does not shrink below the minimum size
+        new_width = max(self.width(), self.minimumWidth())
+        new_height = max(self.height(), self.minimumHeight())
+        self.resize(new_width, new_height)
+
+        # Center the window on the screen after resizing
+        self.center_window()
+
+    def on_visualize_req(self, devices: Optional[list[dict]]):
+        # Check if just clearing needed
+        if devices is None:
+            # Renew top_layout status string
+            self.status_label.setText("... no removables ... (initial)")
+            # Clear layout
+            while self.device_layout.count():
+                extracted_layout_item = self.device_layout.takeAt(0)
+                widget_to_delete = extracted_layout_item.widget()
+                if widget_to_delete:
+                    # clear widget object
+                    widget_to_delete.deleteLater()
+
+            self._devices = devices
+            return
+
+        # Explicitly ensure devices are lists
+        previous_devices = self._devices or []
+        current_devices = devices or []
+
+        # Define removed and added lists
+        removed_devices = [d for d in previous_devices if d not in current_devices]
+        added_devices = [d for d in current_devices if d not in previous_devices]
+
+        self._devices = devices
+
+        # Check if no changes given
+        if removed_devices == added_devices == []:
+            return
+
+        # Apply changes
+        if not devices:
+            self.status_label.setText("No removables.")
+        else:
+            self.status_label.setText("Removables found.")
+
+        # Vizually remove 'removed'
+
+
+
+        # Vizually add 'added'
+
+        for device in devices:
+            device_info_layout = QHBoxLayout()
+
+            device_info = QLabel(
+                f"{device['drive']} -- {device['id']} -- {device.get('model', 'None')}")
+            device_info_layout.addWidget(device_info)
+
+            # Adding additional buttons if model is present
+            if device.get('model') is not None:
+                button_layout = QHBoxLayout()
+                button_layout.addStretch(1)     # Push buttons to the right
+
+                copy_button = QPushButton("C")
+                move_button = QPushButton("M")
+                see_button = QPushButton("see")
+
+                # Make buttons small and square
+                copy_button.setFixedSize(30, 30)
+                move_button.setFixedSize(30, 30)
+                see_button.setFixedSize(30, 30)
+
+                button_layout.addWidget(copy_button)
+                button_layout.addWidget(move_button)
+                button_layout.addWidget(see_button)
+
+                device_info_layout.addLayout(button_layout)
+
+            self.device_layout.addLayout(device_info_layout)
+
+        # Adjust window size based on content
+        self.adjust_size_and_position()
+
+# ---
 
 class MonitoringIndicator(QWidget):
     qts_user_force_monstate = pyqtSignal(bool)  # Signal to force onstate
@@ -72,164 +263,7 @@ class MonitoringIndicator(QWidget):
         self.update()  # Update the visual appearance
 
 
-class ProgramViewQ(QWidget):
-    # Signal for exiting the application
-    to_exit_application = pyqtSignal()
-    qts_user_action = pyqtSignal(Any)
 
-    def __init__(self):
-        super().__init__()
-        trace("Dialog window to create")
-        self._devices = []
-
-        # Set window title, icon, size
-        self.setWindowTitle("CondoCopy3 v.0")
-        self.setWindowIcon(QIcon("icon1.png"))
-        self.setMinimumSize(500, 220)  # Minimum size set to 500x220
-
-        # Setting up the interface
-        self.layout = QVBoxLayout()
-
-        # Top layout with label and monitoring indicator
-        self.top_layout = QHBoxLayout()
-        self.status_label = QLabel("... no removables ...")
-        self.mon_indic = MonitoringIndicator()
-        # Adding the label and monitoring indicator to the top layout
-        self.top_layout.addWidget(self.status_label)
-        self.top_layout.addStretch(1)  # Push monitoring indicator to the right
-        self.top_layout.addWidget(self.mon_indic)
-        self.layout.addLayout(self.top_layout)
-
-        # Placeholder layout for device information within a scroll area
-        self.scroll_area = QScrollArea(self)
-        self.scroll_area.setWidgetResizable(True)
-        self.device_widget = QWidget()
-        self.device_layout = QVBoxLayout(self.device_widget)
-        self.scroll_area.setWidget(self.device_widget)
-        self.layout.addWidget(self.scroll_area)
-
-        # Control buttons
-        self.to_tray_button = QPushButton("toTray")
-        self.close_button = QPushButton("Close")
-        self.to_tray_button.clicked.connect(self.minimize_to_tray)
-        self.close_button.clicked.connect(self.perform_exit)
-
-        control_layout = QHBoxLayout()
-        control_layout.addWidget(self.to_tray_button)
-        control_layout.addWidget(self.close_button)
-        self.layout.addLayout(control_layout)
-
-        self.setLayout(self.layout)
-
-        # Configure window flags to make it appear as the main window on the taskbar
-        self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
-
-        # Initialize system tray with context menu options
-        self.tray_icon = QSystemTrayIcon(QIcon("icon1.png"), parent=self)
-        tray_menu = QMenu(self)
-        restore_action = QAction("Restore", self)
-        restore_action.triggered.connect(self.show_window)
-        tray_menu.addAction(restore_action)
-
-        exit_action = QAction("Exit", self)
-        exit_action.triggered.connect(self.perform_exit)
-        tray_menu.addAction(exit_action)
-
-        self.tray_icon.setContextMenu(tray_menu)
-        self.tray_icon.show()
-
-        self.show_window()
-        self.adjust_size_and_position()
-
-    def center_window(self):
-        """Center the window on the screen."""
-        frame_geom = self.frameGeometry()
-        screen_center = self.screen().availableGeometry().center()
-        frame_geom.moveCenter(screen_center)
-        self.move(frame_geom.topLeft())
-
-    def closeEvent(self, event):
-        # Emit a signal to close the application globally
-        self.to_exit_application.emit()
-        event.accept()  # Accept the close event
-
-    def changeEvent(self, event):
-        # Minimize to tray if window is minimized
-        if event.type() == QEvent.WindowStateChange and self.isMinimized():
-            self.hide()
-
-    def show_window(self):
-        # Restore the window from minimized state
-        self.showNormal()
-
-    def perform_exit(self):
-        # Hide the system tray icon and close the application
-        self.tray_icon.hide()
-        self.close()  # This will also trigger the closeEvent
-
-    def minimize_to_tray(self):
-        self.hide()
-
-    def on_visualize_req(self, devices):
-        # Update the UI based on the list of devices
-        self._devices = devices
-        for i in reversed(range(self.device_layout.count())):
-            widget_to_remove = self.device_layout.itemAt(i).widget()
-            if widget_to_remove:
-                widget_to_remove.deleteLater()
-
-        if not devices:
-            self.status_label.setText("... no removables ...")
-            # Hide the monitoring indicator if no devices are found
-            self.status_label.show()
-        else:
-            self.status_label.setText("Removables Found:")
-            # Show the monitoring indicator if devices are found
-            for device in devices:
-                device_info_layout = QHBoxLayout()
-
-                device_info = QLabel(
-                    f"{device['drive']} -- {device['id']} -- {device.get('model', 'None')}")
-                device_info_layout.addWidget(device_info)
-
-                # Adding additional buttons if model is present
-                # todo vv--  --vv
-                if device.get('model') is not None:
-                    button_layout = QHBoxLayout()
-                    button_layout.addStretch(1)  # Push buttons to the right
-
-                    copy_button = QPushButton("C")
-                    move_button = QPushButton("M")
-                    see_button = QPushButton("see")
-
-                    # Make buttons small and square
-                    copy_button.setFixedSize(30, 30)
-                    move_button.setFixedSize(30, 30)
-                    see_button.setFixedSize(30, 30)
-
-                    button_layout.addWidget(copy_button)
-                    button_layout.addWidget(move_button)
-                    button_layout.addWidget(see_button)
-
-                    device_info_layout.addLayout(button_layout)
-
-                self.device_layout.addLayout(device_info_layout)
-
-        # Adjust window size based on content
-        self.adjust_size_and_position()
-
-    def adjust_size_and_position(self):
-        # Ensure that the widget size adjusts according to its content
-        self.device_widget.adjustSize()
-        self.adjustSize()
-
-        # Ensure that the window does not shrink below the minimum size
-        new_width = max(self.width(), self.minimumWidth())
-        new_height = max(self.height(), self.minimumHeight())
-        self.resize(new_width, new_height)
-
-        # Center the window on the screen after resizing
-        self.center_window()
 
 # # For testing purposes:
 # if __name__ == "__main__":
