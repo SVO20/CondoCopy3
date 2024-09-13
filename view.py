@@ -195,21 +195,27 @@ class ProgramViewQ(QWidget):
         else:
             self.status_label.setText("Removables found.")
 
-        # Vizually remove 'removed'
-        # todo
-
-        spacer = QSpacerItem(20, 5, QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # Vizually remove 'removed' (now all)
+        trace("Clearing all widgets from device_container_layout")
+        while self.device_container_layout.count():
+            extracted_layout_item = self.device_container_layout.takeAt(0)
+            widget_to_delete = extracted_layout_item.widget()
+            if widget_to_delete:
+                widget_to_delete.deleteLater()  # Schedule the widget for deletion
 
         # Vizually add 'added'
+        spacer = QSpacerItem(20, 5, QSizePolicy.Expanding, QSizePolicy.Expanding)
         for device in devices:
             # Create the device holder strip with the layout
-            current_device_holder = QWidget()
-            current_device_holder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-            holder_layout = QHBoxLayout(current_device_holder)
+            device_strip = QWidget()
+            device_strip.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            holder_layout = QHBoxLayout(device_strip)
             holder_layout.setContentsMargins(0, 0, 0, 0)
 
             # Create the device info label the placeholder for buttons
-            curr_device_label = QLabel(f"{device['drive']} -- {device['id']} -- {device.get('model', 'None')}")
+            curr_device_label = QLabel(f"{device['drive']} -"
+                                       f"- {device['id']} -"
+                                       f"- {device.get('model', 'None')}")
             button_holder = QWidget()
 
             # Compose strip
@@ -218,7 +224,7 @@ class ProgramViewQ(QWidget):
             holder_layout.addWidget(button_holder)
 
             # Add  before  last  QSpacerItem
-            add_before_last_spacer(self.device_container_layout, current_device_holder, spacer)
+            add_before_last_spacer(self.device_container_layout, device_strip, spacer)
 
             # Refine buttons management
             button_holder.setMinimumSize(BUTTON_EDGE, BUTTON_EDGE)
