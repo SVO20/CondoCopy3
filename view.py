@@ -10,7 +10,8 @@ from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QSystemTrayIcon, Q
 from PyQt5.QtWidgets import QWidget
 
 from logger import trace
-from myqtclasses import *
+from my_qtclasses import *
+from my_qtutils import *
 
 
 class ProgramViewQ(QWidget):
@@ -27,64 +28,61 @@ class ProgramViewQ(QWidget):
         self.setWindowIcon(QIcon("icon1.png"))
         self.setMinimumSize(500, 220)  # Minimum size set to 500x220
 
-        # VERTICAL
-        self.window_layout = QVBoxLayout()
+        # Main window layout
+        _window_layout = QVBoxLayout()
+        _window_layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(_window_layout)
 
+        # Upper widget setup
+        self.upper_widget = QWidget()
+        self.upper_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        _window_layout.addWidget(self.upper_widget)
+        _upper_layout = QHBoxLayout()
+        _upper_layout.setContentsMargins(0, 0, 0, 0)
+        self.upper_widget.setLayout(_upper_layout)
 
-        # Top line with Hlayout with -> label and monitoring indicator
-        # HORIZONTAL
-
-        self.top_layout = QHBoxLayout()
-        self.top_layout.setSizeConstraint(QLayout.SetFixedSize)
-
+        # Upper widget content
         self.status_label = QLabel("... no removables ...(initial)")
+        _upper_layout.addWidget(self.status_label)
+        # Stretch between label and indicator
+        _upper_layout.addStretch(1)
         self.mon_indic = MonitoringIndicatorBulb()  # MonitoringIndicatorBulb
-        # Adding the label and monitoring indicator to the top layout
-        self.top_layout.addWidget(self.status_label)
-        self.top_layout.addStretch(1)  # Push monitoring indicator to the right
-        self.top_layout.addWidget(self.mon_indic)
-        # Top layout to main layout
-        self.window_layout.addLayout(self.top_layout)
+        _upper_layout.addWidget(self.mon_indic)
 
         # weirdo but:
-        # main_layout -> QScrollArea -> QWidget -> device_layout
+        # _window_layout -> QScrollArea -> device_container_widget -> device_container_layout
         #
         # V---------                             ---------V
 
+        # Middle widget setup (QScrollArea)
+        self.middle_scrollarea = QScrollArea()
+        self.middle_scrollarea.setWidgetResizable(True)
+        self.middle_scrollarea.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        _window_layout.addWidget(self.middle_scrollarea)
 
-        # Create a scroll area for the middle layout
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)               # policy for the widget INSIDE
-        self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # Create a widget container
-        self.device_container_widget = QWidget()
+        # Middle QScrollArea content
+        self.device_container_widget = QWidget()            # ! IMPORTANT
+        self.device_container_layout = QVBoxLayout()        # ! IMPORNANT
+        self.device_container_layout.setSpacing(1)
+        self.device_container_widget.setLayout(self.device_container_layout)
+        self.middle_scrollarea.setWidget(self.device_container_widget)
 
-        # Create the device_layout mapped to the device_container_widget
-        # VERTICAL MARKED as 'device_layout'
-        self.device_layout = QVBoxLayout()
-        self.device_layout.setSpacing(1)
-        self.device_container_widget.setLayout(self.device_layout)          # Added line
+        # Footer widget setup
+        self.lower_widget = QWidget()
+        self.lower_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        _window_layout.addWidget(self.lower_widget)
+        _footer_layout = QHBoxLayout()
+        _footer_layout.setContentsMargins(0, 0, 0, 0)
+        self.lower_widget.setLayout(_footer_layout)
 
-
-        # Add the widget container (with device_layout) to the scroll_area
-        self.scroll_area.setWidget(self.device_container_widget)
-        # Add the scroll_area to the main layout
-        self.window_layout.addWidget(self.scroll_area)
-
-        # Control buttons
-        self.to_tray_button = QPushButton("toTray")
+        # Footer widget content:  buttons
+        self.to_tray_button = QPushButton("To Tray")
+        _footer_layout.addWidget(self.to_tray_button)
         self.close_button = QPushButton("Close")
+        _footer_layout.addWidget(self.close_button)
+        # Connect buttons
         self.to_tray_button.clicked.connect(self.minimize_to_tray)
         self.close_button.clicked.connect(self.perform_exit)
-
-        # HORIZONTAL
-        footer_layout = QHBoxLayout()
-        footer_layout.addWidget(self.to_tray_button)
-        footer_layout.addWidget(self.close_button)
-        self.window_layout.addLayout(footer_layout)
-
-        # APPLY
-        self.setLayout(self.window_layout)
 
         # Configure window flags to make it appear as the main window on the taskbar
         self.setWindowFlags(Qt.Window | Qt.WindowTitleHint | Qt.CustomizeWindowHint)
@@ -158,14 +156,17 @@ class ProgramViewQ(QWidget):
         self.center_window()
 
     def on_visualize_req(self, devices: Optional[list[dict]]):
+        # Local consts
+        BUTTON_EDGE = 30
+
         # Check if just clearing needed
         if devices is None:
             # Renew top_layout status string
             self.status_label.setText("... no removables ... (initial)")
             # Clear layout
             trace("layout to clear")
-            while self.device_layout.count():
-                extracted_layout_item = self.device_layout.takeAt(0)
+            while self.device_container_layout.count():
+                extracted_layout_item = self.device_container_layout.takeAt(0)
                 widget_to_delete = extracted_layout_item.widget()
                 if widget_to_delete:
                     # clear widget object
@@ -197,45 +198,47 @@ class ProgramViewQ(QWidget):
         # Vizually remove 'removed'
         # todo
 
+        spacer = QSpacerItem(20, 5, QSizePolicy.Expanding, QSizePolicy.Expanding)
+
         # Vizually add 'added'
         for device in devices:
-            device_info_layout = QHBoxLayout()
-            device_info_layout.setContentsMargins(1, 1, 1, 1)
-            device_info_layout.setSpacing(0)
+            # Create the device holder strip with the layout
+            current_device_holder = QWidget()
+            current_device_holder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+            holder_layout = QHBoxLayout(current_device_holder)
+            holder_layout.setContentsMargins(0, 0, 0, 0)
 
-            # # Set minimum height for the layout items to simulate row height
-            # min_height = 32  # Define the minimum height for each row
+            # Create the device info label the placeholder for buttons
+            curr_device_label = QLabel(f"{device['drive']} -- {device['id']} -- {device.get('model', 'None')}")
+            button_holder = QWidget()
 
-            # Create the device info label
-            device_info = QLabel(
-                f"{device['drive']} -- {device['id']} -- {device.get('model', 'None')}")
-            # device_info.setMinimumHeight(min_height)  # Set minimum height for the label
-            device_info_layout.addWidget(device_info)
+            # Compose strip
+            holder_layout.addWidget(curr_device_label)
+            holder_layout.addStretch(1)
+            holder_layout.addWidget(button_holder)
 
-            # Adding additional buttons if model is present
+            # Add  before  last  QSpacerItem
+            add_before_last_spacer(self.device_container_layout, current_device_holder, spacer)
+
+            # Refine buttons management
+            button_holder.setMinimumSize(BUTTON_EDGE, BUTTON_EDGE)
+            button_holder.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+            button_holder_layout = QHBoxLayout(button_holder)
+            button_holder_layout.setContentsMargins(0, 0, 0, 0)
+            # Create buttons if needed
             if device.get('model') is not None:
-                button_layout = QHBoxLayout()
-                button_layout.addStretch(1)     # Push buttons to the right
-
                 copy_button = QPushButton("C")
                 move_button = QPushButton("M")
                 see_button = QPushButton("see")
 
                 # Make buttons small and square
-                copy_button.setFixedSize(30, 30)
-                move_button.setFixedSize(30, 30)
-                see_button.setFixedSize(30, 30)
+                copy_button.setFixedSize(BUTTON_EDGE, BUTTON_EDGE)
+                move_button.setFixedSize(BUTTON_EDGE, BUTTON_EDGE)
+                see_button.setFixedSize(BUTTON_EDGE, BUTTON_EDGE)
 
-                button_layout.addWidget(copy_button)
-                button_layout.addWidget(move_button)
-                button_layout.addWidget(see_button)
-
-                device_info_layout.addLayout(button_layout)
-            self.device_layout.addLayout(device_info_layout)
-
-        # SPACER WIDGET - for expansion
-        # spacer = QSpacerItem(20, 5, QSizePolicy.Expanding, QSizePolicy.Expanding)
-        # self.device_layout.addItem(spacer)
+                button_holder_layout.addWidget(copy_button)
+                button_holder_layout.addWidget(move_button)
+                button_holder_layout.addWidget(see_button)
 
         # Adjust window size based on content
         self.adjust_size_and_position()
